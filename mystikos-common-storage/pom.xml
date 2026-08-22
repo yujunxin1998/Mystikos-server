@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mystikos</groupId>
+        <artifactId>mystikos-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mystikos-common-storage</artifactId>
+    <packaging>jar</packaging>
+
+    <!--
+        对象存储接入，选型 MinIO（自建对象存储，S3 兼容协议）。
+        ObjectStorageService 是接口（Port），MinioObjectStorageService 是当前唯一实现——
+        以后要换成阿里云 OSS/腾讯云 COS/真的 AWS S3，只加一个新的实现类切 Bean，
+        各限界上下文依赖的都是接口，不用改业务代码。
+        提供了一个通用的 /api/v1/files 上传/查询/删除接口，具体业务模块
+        （头像、订单凭证、审核证据……）如果需要更专属的语义，可以自己包一层。
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations-jakarta</artifactId>
+            <version>${swagger-annotations.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

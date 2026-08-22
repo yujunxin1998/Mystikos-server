@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mystikos</groupId>
+        <artifactId>mystikos-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mystikos-common-security</artifactId>
+    <packaging>jar</packaging>
+
+    <!--
+        当前用户上下文工具类 + 自签发 JWT 的签发/校验/过滤器。
+        鉴权模型：本地账号（手机号/邮箱/密码或验证码）和第三方登录（OAuth 授权码换用户信息，
+        Provider 待定）成功后都由我们自己签发 JWT，后续请求用这个 JWT 认证——
+        不是接一个外部 OAuth2 Authorization Server 做 Resource Server 校验，
+        是自己当签发方也当校验方，所以不需要 issuer-uri/JWKS 那一套。
+        具体第三方 Provider（Discord/微信……）的授权码换用户信息逻辑还没接，
+        见 mystikos-identity 的 AuthApplicationService.loginWithOAuth。
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

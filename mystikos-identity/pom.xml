@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mystikos</groupId>
+        <artifactId>mystikos-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mystikos-identity</artifactId>
+    <packaging>jar</packaging>
+
+    <!--
+        身份与访问限界上下文：本地账号、RBAC（用户-角色-权限）、会员等级挂点。
+        领域模型见 docs/architecture/domain-model.md。
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-event</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- 提供 PasswordEncoder（BCrypt），来自 spring-security-crypto 的传递依赖 -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- 验证码存储 + 登录/验证码限流都基于 Redis，见 infrastructure/cache -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-cache</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- 邮件验证码走通用 SMTP，见 infrastructure/acl 的 SmtpEmailSender -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>dysmsapi20170525</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

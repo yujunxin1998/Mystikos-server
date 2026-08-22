@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.mystikos</groupId>
+    <artifactId>mystikos-server</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <!--
+        限界上下文模块划分详见 docs/architecture/module-structure.md。
+        mystikos-booking 是五层 DDD 结构的打样实现；其余业务模块目前只是
+        Maven 模块骨架（pom.xml + package-info.java），内部结构待实现时参照 booking。
+    -->
+    <modules>
+        <module>mystikos-common</module>
+        <module>mystikos-common-web</module>
+        <module>mystikos-common-event</module>
+        <module>mystikos-common-security</module>
+        <module>mystikos-common-cache</module>
+        <module>mystikos-common-storage</module>
+
+        <module>mystikos-identity</module>
+        <module>mystikos-membership</module>
+        <module>mystikos-provider-catalog</module>
+        <module>mystikos-booking</module>
+        <module>mystikos-commerce</module>
+        <module>mystikos-gifting</module>
+        <module>mystikos-relationship</module>
+        <module>mystikos-payment</module>
+        <module>mystikos-leaderboard</module>
+        <module>mystikos-review</module>
+        <module>mystikos-trust-safety</module>
+        <module>mystikos-notification</module>
+
+        <module>mystikos-app</module>
+    </modules>
+
+    <properties>
+        <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <spring-boot.version>3.2.5</spring-boot.version>
+        <mybatis-plus.version>3.5.11</mybatis-plus.version>
+        <postgresql.version>42.7.2</postgresql.version>
+        <knife4j.version>4.3.0</knife4j.version>
+        <!-- 与 knife4j-openapi3-spring-boot-starter 4.3.0 实际拉取的一致，供业务模块显式声明版本 -->
+        <swagger-annotations.version>2.2.15</swagger-annotations.version>
+        <jwt.version>0.11.5</jwt.version>
+        <minio.version>9.0.3</minio.version>
+        <aliyun-sms.version>4.6.0</aliyun-sms.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+            <!--
+                注意：groupId 一样但有两个 artifactId，选错会在启动时炸
+                （NoClassDefFoundError: javax/servlet/Filter）——
+                knife4j-openapi3-spring-boot-starter 是 Spring Boot 2.x / javax 命名空间的老版本，
+                knife4j-openapi3-jakarta-spring-boot-starter 才是 Spring Boot 3.x / jakarta 命名空间对应的。
+            -->
+            <dependency>
+                <groupId>com.github.xiaoymin</groupId>
+                <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+                <version>${knife4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-annotations-jakarta</artifactId>
+                <version>${swagger-annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-api</artifactId>
+                <version>${jwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-impl</artifactId>
+                <version>${jwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.jsonwebtoken</groupId>
+                <artifactId>jjwt-jackson</artifactId>
+                <version>${jwt.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.aliyun</groupId>
+                <artifactId>dysmsapi20170525</artifactId>
+                <version>${aliyun-sms.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                    <parameters>true</parameters>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

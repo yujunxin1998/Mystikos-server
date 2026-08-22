@@ -1,0 +1,97 @@
+# 本地开发占位配置，未做任何环境隔离/密钥管理，正式环境前必须外部化
+# （见 docs/architecture/domain-model.md 第 11 节的 P0 上线门：密钥轮换、配置隔离）。
+server:
+  port: 8099
+
+spring:
+  application:
+    name: mystikos-app
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mystikos
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    # 所有 SQL 集中在仓库根目录的 deploy/sql（不再按模块拆在各自 classpath 下）。
+    # 用文件系统路径而不是 classpath，运行/部署时的工作目录必须能看到这个目录——
+    # 本地起服务（IDE 或 mvn spring-boot:run）工作目录通常就是仓库根目录；
+    # 容器化部署可以用 SQL_DIR 环境变量覆盖成镜像里的绝对路径。
+    locations: filesystem:${SQL_DIR:deploy/sql}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:Mystikos}
+      database: ${REDIS_DATABASE:0}
+  # 通用 SMTP 发信配置，不绑定具体厂商——host/port/账号密码换成任意 SMTP 中继（阿里云邮件推送/
+  # SendGrid/Mailgun/自建）都能用。mystikos.mail.enabled=false（默认）时这组配置不生效，
+  # 验证码邮件只打日志（见 mystikos-identity 的 LoggingEmailSender）。
+  # 账号密码不写死默认值——这个文件要进 git，真实密码只通过环境变量注入，本地测试时临时 export/$env: 即可。
+  # 下面 properties 走的是 SSL/465（163/QQ 邮箱这类国内厂商的常见方式）；换成 STARTTLS/587 的厂商
+  # （Gmail/SendGrid 等）要把 ssl.enable+socketFactory 换回 starttls.enable，这块目前是写死的，不随 host 联动。
+  mail:
+    host: ${MAIL_SMTP_HOST:}
+    port: ${MAIL_SMTP_PORT:465}
+    username: ${MAIL_SMTP_USERNAME:}
+    password: ${MAIL_SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+            port: 465
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com.mystikos: debug
+
+# Knife4j / springdoc：本地是 http://localhost:${server.port}/doc.html
+# 生产环境上线前必须关掉（避免暴露接口全貌），到时候按 profile 覆盖 knife4j.production: true。
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# 自签发 JWT 的密钥/有效期。secret 是本地开发占位值（仅示例用途，长度够 HS256 要求的 256 位），
+# 上线前必须换成从密钥管理服务/环境变量读取的真实密钥，见 P0 上线门。
+mystikos:
+  jwt:
+    secret: ${JWT_SECRET:mystikos-local-dev-secret-do-not-use-in-production-please-rotate-me}
+    access-token-ttl-minutes: 120
+  # MinIO 对象存储。本地起一个 MinIO 最简单的方式：
+  #   docker run -p 9000:9000 -p 9001:9001 -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin minio/minio server /data --console-address ":9001"
+  # access-key/secret-key 生产环境必须换成非默认值，通过环境变量注入。
+  oss:
+    minio:
+      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      access-key: ${MINIO_ACCESS_KEY:minioadmin}
+      secret-key: ${MINIO_SECRET_KEY:minioadmin}
+      bucket: ${MINIO_BUCKET:mystikos}
+      presigned-url-ttl-minutes: 15
+  # 验证码邮件是否真实发送。false（默认）时走 LoggingEmailSender 只打日志；
+  # 要真实发信，把 MAIL_ENABLED 设成 true 并且上面 spring.mail.* 填好真实 SMTP 账号。
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@mystikos.local}
+  # Discord OAuth2 登录。client-id 留空时 DiscordOAuthClient 这个 Bean 不会注册，
+  # /api/v1/auth/oauth/discord/login 会返回"该第三方登录方式暂未开放"而不是拿空凭证去调 Discord API。
+  # redirect-uri 必须和 Discord Developer Portal 应用配置里的 redirect、以及前端发起授权时用的 URI 完全一致。
+  oauth:
+    discord:
+      client-id: ${DISCORD_CLIENT_ID:}
+      client-secret: ${DISCORD_CLIENT_SECRET:}
+      redirect-uri: ${DISCORD_REDIRECT_URI:}

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mystikos</groupId>
+        <artifactId>mystikos-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mystikos-common-cache</artifactId>
+    <packaging>jar</packaging>
+
+    <!--
+        Redis 接入：RedisTemplate<String, Object> 的序列化配置（key 用 String，
+        value 用 JSON，避免默认 JDK 序列化产生的不可读二进制和跨语言/跨版本兼容问题）。
+        各限界上下文按需注入 RedisTemplate 自己用，这里不做业务语义封装
+        （不提供"验证码专用/限流专用"之类的方法——那些属于各自模块的基础设施层）。
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

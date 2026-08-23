@@ -20,8 +20,8 @@ public class UpdateProfileRequest implements Serializable {
     @Schema(description = "性别，不填默认不愿透露")
     private Gender gender;
 
-    @Schema(description = "头像地址，先通过 /api/v1/files/upload 拿到 URL 再填这里")
-    private String avatarUrl;
+    @Schema(description = "头像对象键，取 /api/v1/files/upload 返回的 objectKey")
+    private String avatarObjectKey;
 
     @Schema(description = "生日，仅作资料展示，不作为年龄/实名认证依据")
     private LocalDate birthDate;

@@ -47,7 +47,7 @@ public class ProfileController {
     public APIResponse<Void> updateProfile(@Valid @RequestBody UpdateProfileRequest request) {
         Long userId = Long.valueOf(CurrentUserContext.get().userId());
         userApplicationService.updateProfile(userId, request.getNickname(), request.getGender(),
-                request.getAvatarUrl(), request.getBirthDate(), request.getBio(), request.getRegionCode());
+                request.getAvatarObjectKey(), request.getBirthDate(), request.getBio(), request.getRegionCode());
         return APIResponse.ok();
     }
 

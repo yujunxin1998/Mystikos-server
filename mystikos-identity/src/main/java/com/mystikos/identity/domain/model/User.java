@@ -25,7 +25,7 @@ public class User {
     private String nickname;
     private boolean privacyAnonymous;
     private Gender gender;
-    private String avatarUrl;
+    private String avatarObjectKey;
     private LocalDate birthDate;
     private String bio;
     private String regionCode;
@@ -38,7 +38,7 @@ public class User {
     private final OffsetDateTime createdAt;
 
     private User(Long id, String phone, String email, String passwordHash, String nickname,
-                  boolean privacyAnonymous, Gender gender, String avatarUrl, LocalDate birthDate,
+                  boolean privacyAnonymous, Gender gender, String avatarObjectKey, LocalDate birthDate,
                   String bio, String regionCode, UserStatus status, Set<Role> roles,
                   Set<OAuthBinding> oauthBindings, Set<Long> tagIds, Integer membershipTierLevel,
                   String membershipTierCode, OffsetDateTime createdAt) {
@@ -53,7 +53,7 @@ public class User {
         this.nickname = nickname;
         this.privacyAnonymous = privacyAnonymous;
         this.gender = gender == null ? Gender.UNDISCLOSED : gender;
-        this.avatarUrl = avatarUrl;
+        this.avatarObjectKey = avatarObjectKey;
         this.birthDate = birthDate;
         this.bio = bio;
         this.regionCode = regionCode;
@@ -82,11 +82,11 @@ public class User {
 
     /** 从持久化数据重建聚合，仅供仓储实现调用。 */
     public static User restore(Long id, String phone, String email, String passwordHash, String nickname,
-                                boolean privacyAnonymous, Gender gender, String avatarUrl, LocalDate birthDate,
+                                boolean privacyAnonymous, Gender gender, String avatarObjectKey, LocalDate birthDate,
                                 String bio, String regionCode, UserStatus status, Set<Role> roles,
                                 Set<OAuthBinding> oauthBindings, Set<Long> tagIds, Integer membershipTierLevel,
                                 String membershipTierCode, OffsetDateTime createdAt) {
-        return new User(id, phone, email, passwordHash, nickname, privacyAnonymous, gender, avatarUrl,
+        return new User(id, phone, email, passwordHash, nickname, privacyAnonymous, gender, avatarObjectKey,
                 birthDate, bio, regionCode, status, roles, oauthBindings, tagIds, membershipTierLevel,
                 membershipTierCode, createdAt);
     }
@@ -107,11 +107,11 @@ public class User {
      * 独立的实名认证流程（见 docs/architecture/prd-alignment.md 缺口2），
      * 两者故意不互相赋值。
      */
-    public void updateProfileDetails(String nickname, Gender gender, String avatarUrl, LocalDate birthDate,
+    public void updateProfileDetails(String nickname, Gender gender, String avatarObjectKey, LocalDate birthDate,
                                       String bio, String regionCode) {
         this.nickname = nickname;
         this.gender = gender == null ? Gender.UNDISCLOSED : gender;
-        this.avatarUrl = avatarUrl;
+        this.avatarObjectKey = avatarObjectKey;
         this.birthDate = birthDate;
         this.bio = bio;
         this.regionCode = regionCode;
@@ -213,8 +213,8 @@ public class User {
         return gender;
     }
 
-    public String getAvatarUrl() {
-        return avatarUrl;
+    public String getAvatarObjectKey() {
+        return avatarObjectKey;
     }
 
     public LocalDate getBirthDate() {

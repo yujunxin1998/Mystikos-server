@@ -27,7 +27,8 @@ public enum ResponseCode implements IResponseCode {
 
     FILE_EMPTY(1006, "上传文件为空"),
     FILE_UPLOAD_FAILED(1007, "文件上传失败"),
-    FILE_NOT_FOUND(1008, "文件不存在");
+    FILE_NOT_FOUND(1008, "文件不存在"),
+    FILE_TOO_LARGE(1009, "上传文件不能超过 5 MB");
 
     private final int code;
     private final String message;

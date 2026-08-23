@@ -2,6 +2,7 @@ package com.mystikos.identity.application.service;
 
 import com.mystikos.common.region.RegionQueryService;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.common.storage.ObjectStorageService;
 import com.mystikos.identity.adapter.web.dto.AdminCreateUserRequest;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.Gender;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -34,17 +36,20 @@ public class UserApplicationService {
     private final TagDefinitionRepository tagDefinitionRepository;
     private final RegionQueryService regionQueryService;
     private final PasswordEncoder passwordEncoder;
+    private final ObjectStorageService objectStorageService;
 
     public UserApplicationService(UserRepository userRepository,
                                    PermissionRepository permissionRepository,
                                    TagDefinitionRepository tagDefinitionRepository,
                                    RegionQueryService regionQueryService,
-                                   PasswordEncoder passwordEncoder) {
+                                   PasswordEncoder passwordEncoder,
+                                   ObjectStorageService objectStorageService) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.tagDefinitionRepository = tagDefinitionRepository;
         this.regionQueryService = regionQueryService;
         this.passwordEncoder = passwordEncoder;
+        this.objectStorageService = objectStorageService;
     }
 
     /** 管理员新增用户：跳过验证码校验，手机号/邮箱唯一性校验与注册流程一致。 */
@@ -123,20 +128,23 @@ public class UserApplicationService {
         List<TagView> tags = tagDefinitionRepository.findByIds(user.getTagIds()).stream()
                 .map(TagApplicationService::toView)
                 .toList();
+        String avatarObjectKey = user.getAvatarObjectKey();
+        String avatarUrl = avatarObjectKey == null ? null
+                : objectStorageService.presignedDownloadUrl(avatarObjectKey, Duration.ofMinutes(15));
         return new UserProfileView(user.getId(), user.getPhone(), user.getEmail(), user.getNickname(),
-                user.isPrivacyAnonymous(), user.getGender(), user.getAvatarUrl(), user.getBirthDate(),
+                user.isPrivacyAnonymous(), user.getGender(), avatarObjectKey, avatarUrl, user.getBirthDate(),
                 user.getBio(), user.getRegionCode(), tags, user.getRoles(), user.getMembershipTierLevel(),
                 user.getMembershipTierCode(), user.getStatus());
     }
 
     @Transactional
-    public void updateProfile(Long userId, String nickname, Gender gender, String avatarUrl,
+    public void updateProfile(Long userId, String nickname, Gender gender, String avatarObjectKey,
                                LocalDate birthDate, String bio, String regionCode) {
         if (regionCode != null && !regionQueryService.exists(regionCode)) {
             throw IdentityException.regionNotFound(regionCode);
         }
         User user = getUser(userId);
-        user.updateProfileDetails(nickname, gender, avatarUrl, birthDate, bio, regionCode);
+        user.updateProfileDetails(nickname, gender, avatarObjectKey, birthDate, bio, regionCode);
         userRepository.save(user);
     }
 

@@ -89,5 +89,11 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <!-- 用户资料持久化 objectKey，查询时通过对象存储端口生成临时展示 URL。 -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-storage</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

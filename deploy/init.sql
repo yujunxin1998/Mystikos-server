@@ -976,7 +976,7 @@ CREATE TABLE public.identity_user (
     nickname character varying(64),
     privacy_anonymous boolean DEFAULT false NOT NULL,
     gender character varying(16) DEFAULT 'UNDISCLOSED'::character varying NOT NULL,
-    avatar_url character varying(255),
+    avatar_object_key text,
     birth_date date,
     bio character varying(255),
     region_code character varying(10)
@@ -1068,10 +1068,10 @@ COMMENT ON COLUMN public.identity_user.gender IS '性别：MALE/FEMALE/UNDISCLOS
 
 
 --
--- Name: COLUMN identity_user.avatar_url; Type: COMMENT; Schema: public; Owner: -
+-- Name: COLUMN identity_user.avatar_object_key; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON COLUMN public.identity_user.avatar_url IS '头像地址（对象存储 URL），先经 /api/v1/files/upload 上传拿到 URL';
+COMMENT ON COLUMN public.identity_user.avatar_object_key IS '头像对象存储键，展示 URL 在查询资料时动态生成';
 
 
 --
@@ -1928,11 +1928,11 @@ INSERT INTO public.gifting_catalog_item (id, code, name, icon, price, unlock_rul
 -- Data for Name: identity_user; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (1, NULL, 'administrator@mystikos.local', '$2a$10$.sIFVYoV58.JuSrgv5b2ueFFjMsZ8cl5VsrhYouHp/9DW5T1sdG/.', 'ACTIVE', NULL, NULL, '2026-08-22 00:54:43.426514+08', '超级管理员', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
-INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (2, NULL, 'member@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '会员测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
-INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (3, NULL, 'companion@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '陪玩测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
-INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (4, NULL, 'customerservice@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '客服测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
-INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (5, NULL, 'assessor@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '考核官测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_object_key, birth_date, bio, region_code) VALUES (1, NULL, 'administrator@mystikos.local', '$2a$10$.sIFVYoV58.JuSrgv5b2ueFFjMsZ8cl5VsrhYouHp/9DW5T1sdG/.', 'ACTIVE', NULL, NULL, '2026-08-22 00:54:43.426514+08', '超级管理员', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_object_key, birth_date, bio, region_code) VALUES (2, NULL, 'member@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '会员测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_object_key, birth_date, bio, region_code) VALUES (3, NULL, 'companion@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '陪玩测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_object_key, birth_date, bio, region_code) VALUES (4, NULL, 'customerservice@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '客服测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_object_key, birth_date, bio, region_code) VALUES (5, NULL, 'assessor@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '考核官测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
 
 
 --

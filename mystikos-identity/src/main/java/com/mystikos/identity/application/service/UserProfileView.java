@@ -15,6 +15,7 @@ public record UserProfileView(
         String nickname,
         boolean privacyAnonymous,
         Gender gender,
+        String avatarObjectKey,
         String avatarUrl,
         LocalDate birthDate,
         String bio,

@@ -77,8 +77,8 @@ public class UserPO implements Serializable {
      * 头像地址（对象存储 URL）
      */
     @Schema(description = "头像地址")
-    @TableField("avatar_url")
-    private String avatarUrl;
+    @TableField("avatar_object_key")
+    private String avatarObjectKey;
 
     /**
      * 生日，仅作资料展示，不作为年龄/实名认证依据

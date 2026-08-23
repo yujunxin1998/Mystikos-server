@@ -149,7 +149,7 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getNickname(),
                 Boolean.TRUE.equals(po.getPrivacyAnonymous()),
                 po.getGender() == null ? Gender.UNDISCLOSED : Gender.valueOf(po.getGender()),
-                po.getAvatarUrl(),
+                po.getAvatarObjectKey(),
                 po.getBirthDate(),
                 po.getBio(),
                 po.getRegionCode(),
@@ -171,7 +171,7 @@ public class UserRepositoryImpl implements UserRepository {
         po.setNickname(user.getNickname());
         po.setPrivacyAnonymous(user.isPrivacyAnonymous());
         po.setGender(user.getGender().name());
-        po.setAvatarUrl(user.getAvatarUrl());
+        po.setAvatarObjectKey(user.getAvatarObjectKey());
         po.setBirthDate(user.getBirthDate());
         po.setBio(user.getBio());
         po.setRegionCode(user.getRegionCode());

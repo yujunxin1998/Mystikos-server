@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
         return e.getResultCode() != null
                 ? APIResponse.failed(e.getResultCode(), e.getMessage())
                 : APIResponse.failed(ResponseCode.BUSINESS_ERROR, e.getMessage());
+    }
+
+    /** Multipart 请求在进入 Controller 前超过 Spring 配置的上传上限。 */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public APIResponse<Void> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
+        log.warn("上传文件超过允许大小：{}", e.getMessage());
+        return APIResponse.failed(ResponseCode.FILE_TOO_LARGE);
     }
 
     /**

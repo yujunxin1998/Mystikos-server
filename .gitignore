@@ -8,3 +8,6 @@ target/
 *.log
 
 HELP.md
+
+# Local runtime secrets. Keep the example file tracked.
+.env

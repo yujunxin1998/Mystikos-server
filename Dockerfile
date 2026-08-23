@@ -17,4 +17,3 @@ VOLUME ["/app", "/config"]
 EXPOSE 8099
 
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar /app/mystikos-app.jar"]
-s

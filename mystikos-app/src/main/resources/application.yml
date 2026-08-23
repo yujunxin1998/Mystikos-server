@@ -10,9 +10,11 @@ spring:
     import: optional:file:.env[.properties]
   servlet:
     multipart:
-      # 与个人资料页的头像限制保持一致；request 需要为 multipart 边界和字段头留出少量空间。
-      max-file-size: ${MAX_UPLOAD_FILE_SIZE:5MB}
-      max-request-size: ${MAX_UPLOAD_REQUEST_SIZE:6MB}
+      # 全局唯一的 multipart 大小上限，没有按接口区分的机制。原先按头像限制调（5MB/6MB），
+      # 现在还要装下陪玩名片的精彩视频/语音（见 CompanionShowcaseApplicationService），调大到
+      # 能装下一段短视频；request 需要为 multipart 边界和字段头留出少量空间。
+      max-file-size: ${MAX_UPLOAD_FILE_SIZE:100MB}
+      max-request-size: ${MAX_UPLOAD_REQUEST_SIZE:110MB}
   application:
     name: mystikos-app
   datasource:

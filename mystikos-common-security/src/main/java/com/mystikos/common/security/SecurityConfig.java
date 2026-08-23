@@ -62,7 +62,8 @@ public class SecurityConfig {
                     applyWhitelist(auth, whitelist);
                     auth.requestMatchers("/api/v1/auth/**").authenticated()
                             .requestMatchers("/api/v1/manage/**", "/api/v1/profile/**", "/api/v1/files/**",
-                                    "/api/v1/companion-applications/**")
+                                    "/api/v1/companion-applications/**", "/api/v1/companion-showcase/**",
+                                    "/api/v1/companions/**")
                                     .authenticated()
                             .anyRequest().permitAll();
                 })

@@ -36,6 +36,51 @@ public class SpringDocGroupConfig {
                 .build();
     }
 
+    /** Gifting（礼物打赏），见 mystikos-gifting。 */
+    @Bean
+    public GroupedOpenApi giftingApi() {
+        return GroupedOpenApi.builder()
+                .group("Gifting · 礼物打赏")
+                .pathsToMatch("/api/v1/gifts/**")
+                .build();
+    }
+
+    /** Relationship（亲密度），见 mystikos-relationship。 */
+    @Bean
+    public GroupedOpenApi relationshipApi() {
+        return GroupedOpenApi.builder()
+                .group("Relationship · 亲密度")
+                .pathsToMatch("/api/v1/relationships/**")
+                .build();
+    }
+
+    /** Leaderboard & Stats（排行榜），见 mystikos-leaderboard。 */
+    @Bean
+    public GroupedOpenApi leaderboardApi() {
+        return GroupedOpenApi.builder()
+                .group("Leaderboard & Stats · 排行榜")
+                .pathsToMatch("/api/v1/leaderboard/**")
+                .build();
+    }
+
+    /** Membership（会员成长），见 mystikos-membership。 */
+    @Bean
+    public GroupedOpenApi membershipApi() {
+        return GroupedOpenApi.builder()
+                .group("Membership · 会员成长")
+                .pathsToMatch("/api/v1/memberships/**")
+                .build();
+    }
+
+    /** Commerce（商城）：商品/购物车/心愿单/订单，见 mystikos-commerce。 */
+    @Bean
+    public GroupedOpenApi commerceApi() {
+        return GroupedOpenApi.builder()
+                .group("Commerce · 商城")
+                .pathsToMatch("/api/v1/products/**", "/api/v1/cart/**", "/api/v1/wishlist/**", "/api/v1/orders/**")
+                .build();
+    }
+
     /**
      * 文件与对象存储不是业务限界上下文，是 mystikos-common-storage 提供的通用技术能力
      * （被各业务上下文按需调用），单独归一组，不挂在任何业务上下文名下。

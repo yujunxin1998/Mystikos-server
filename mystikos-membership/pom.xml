@@ -30,6 +30,17 @@
             <artifactId>mystikos-common-event</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <!--
+            只为了拿 GiftSentEvent 事件契约类做 @EventListener。这是临时顶替方案——
+            按 domain-model.md 的事件图，Membership 真正应该订阅的是 mystikos-payment
+            的 PaymentCaptured，但 Payment 上下文还没建（S6，这次不在范围内）。
+            Payment 落地后要把这个依赖和对应的监听器换掉，见 infrastructure/acl 包。
+        -->
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-gifting</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>

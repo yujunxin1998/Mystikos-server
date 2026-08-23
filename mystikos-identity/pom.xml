@@ -51,6 +51,16 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <dependency>
+            <!--
+                只为了拿 MembershipTierUpgradedEvent 事件契约类做 @EventListener，
+                把 User.membershipTierLevel/Code 更新成本地只读投影（见 infrastructure/acl）。
+                方向是"消费方依赖发布方"，Membership 不需要依赖 Identity，不循环。
+            -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-membership</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>dysmsapi20170525</artifactId>
         </dependency>

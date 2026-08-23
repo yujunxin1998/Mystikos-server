@@ -31,7 +31,7 @@ import java.time.OffsetDateTime;
  */
 @RestController
 @RequestMapping("/api/v1/manage/companions")
-@Tag(name = "后台管理 - 陪玩管理", description = "打手新增/删除/列表检索/统计，运营态操作")
+@Tag(name = "后台管理 - 陪玩管理", description = "陪玩新增/删除/列表检索/统计，运营态操作")
 public class CompanionController {
 
     private final CompanionApplicationService companionApplicationService;
@@ -41,7 +41,7 @@ public class CompanionController {
     }
 
     @PostMapping
-    @Operation(summary = "新增打手", description = "创建登录账号（角色=COMPANION）+ 打手扩展资料")
+    @Operation(summary = "新增陪玩", description = "创建登录账号（角色=COMPANION）+ 打手扩展资料")
     @SecurityRequirement(name = "bearerAuth")
     public APIResponse<Void> create(@Valid @RequestBody AdminCreateCompanionRequest request) {
         companionApplicationService.createCompanion(request);
@@ -49,7 +49,7 @@ public class CompanionController {
     }
 
     @DeleteMapping("/{userId}")
-    @Operation(summary = "删除打手", description = "只删打手扩展资料，不删登录账号；账号删除见用户管理")
+    @Operation(summary = "删除陪玩", description = "只删打手扩展资料，不删登录账号；账号删除见用户管理")
     @SecurityRequirement(name = "bearerAuth")
     public APIResponse<Void> delete(@Parameter(description = "用户ID") @PathVariable Long userId) {
         companionApplicationService.deleteCompanion(userId);
@@ -74,7 +74,7 @@ public class CompanionController {
     }
 
     @GetMapping("/stats")
-    @Operation(summary = "打手统计卡片", description = "总打手数/可用/忙碌/平均时薪，占位实现，不受列表搜索条件影响")
+    @Operation(summary = "打手统计卡片", description = "总陪玩数/可用/忙碌/平均时薪，占位实现，不受列表搜索条件影响")
     @SecurityRequirement(name = "bearerAuth")
     public APIResponse<CompanionStatsView> stats() {
         return APIResponse.ok(companionApplicationService.getStats());

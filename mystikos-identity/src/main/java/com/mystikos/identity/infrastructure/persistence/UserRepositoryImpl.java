@@ -13,6 +13,7 @@ import com.mystikos.identity.domain.repository.UserRepository;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -109,10 +110,19 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public PageResult<User> findPage(int pageNum, int pageSize) {
+    public PageResult<User> findPage(int pageNum, int pageSize, UserStatus status,
+                                      OffsetDateTime createdFrom, OffsetDateTime createdTo, String keyword) {
         PageHelper.startPage(pageNum, pageSize);
-        List<UserPO> pos = userMapper.selectList(
-                new LambdaQueryWrapper<UserPO>().orderByDesc(UserPO::getCreatedAt));
+        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        LambdaQueryWrapper<UserPO> wrapper = new LambdaQueryWrapper<UserPO>()
+                .eq(status != null, UserPO::getStatus, status == null ? null : status.name())
+                .ge(createdFrom != null, UserPO::getCreatedAt, createdFrom)
+                .le(createdTo != null, UserPO::getCreatedAt, createdTo)
+                .and(hasKeyword, w -> w.like(UserPO::getNickname, keyword)
+                        .or().like(UserPO::getPhone, keyword)
+                        .or().like(UserPO::getEmail, keyword))
+                .orderByDesc(UserPO::getCreatedAt);
+        List<UserPO> pos = userMapper.selectList(wrapper);
         PageInfo<UserPO> pageInfo = new PageInfo<>(pos);
         List<User> users = pos.stream().map(this::toDomainWithAssociations).toList();
         return PageResult.of(users, pageInfo.getTotal(), pageNum, pageSize);

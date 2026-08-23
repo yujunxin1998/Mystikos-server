@@ -2,18 +2,22 @@ package com.mystikos.identity.application.service;
 
 import com.mystikos.common.region.RegionQueryService;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.identity.adapter.web.dto.AdminCreateUserRequest;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.Gender;
 import com.mystikos.identity.domain.model.Role;
 import com.mystikos.identity.domain.model.TagDefinition;
 import com.mystikos.identity.domain.model.User;
+import com.mystikos.identity.domain.model.UserStatus;
 import com.mystikos.identity.domain.repository.PermissionRepository;
 import com.mystikos.identity.domain.repository.TagDefinitionRepository;
 import com.mystikos.identity.domain.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,15 +33,45 @@ public class UserApplicationService {
     private final PermissionRepository permissionRepository;
     private final TagDefinitionRepository tagDefinitionRepository;
     private final RegionQueryService regionQueryService;
+    private final PasswordEncoder passwordEncoder;
 
     public UserApplicationService(UserRepository userRepository,
                                    PermissionRepository permissionRepository,
                                    TagDefinitionRepository tagDefinitionRepository,
-                                   RegionQueryService regionQueryService) {
+                                   RegionQueryService regionQueryService,
+                                   PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.permissionRepository = permissionRepository;
         this.tagDefinitionRepository = tagDefinitionRepository;
         this.regionQueryService = regionQueryService;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    /** 管理员新增用户：跳过验证码校验，手机号/邮箱唯一性校验与注册流程一致。 */
+    @Transactional
+    public UserProfileView createUser(AdminCreateUserRequest request) {
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw IdentityException.identifierAlreadyExists(request.getPhone());
+        }
+        if (request.getEmail() != null && userRepository.existsByEmail(request.getEmail())) {
+            throw IdentityException.identifierAlreadyExists(request.getEmail());
+        }
+        String passwordHash = request.getPassword() != null
+                ? passwordEncoder.encode(request.getPassword())
+                : null;
+        User user = User.register(request.getPhone(), request.getEmail(), passwordHash, request.getInitialRole());
+        if (request.getNickname() != null) {
+            user.updateProfile(request.getNickname());
+        }
+        return toProfileView(userRepository.save(user));
+    }
+
+    /** 管理员删除用户：逻辑删除，账号状态置为 DELETED。 */
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = getUser(userId);
+        user.delete();
+        userRepository.save(user);
     }
 
     @Transactional
@@ -74,9 +108,13 @@ public class UserApplicationService {
         return toProfileView(getUser(userId));
     }
 
-    /** 运营态用户列表，按创建时间倒序分页，见 UserController。 */
-    public PageResult<UserProfileView> listUsers(int pageNum, int pageSize) {
-        PageResult<User> page = userRepository.findPage(pageNum, pageSize);
+    /**
+     * 运营态用户列表，按创建时间倒序分页，支持按状态/创建时间范围/关键字（昵称、手机号、邮箱）过滤，见 UserController。
+     */
+    public PageResult<UserProfileView> listUsers(int pageNum, int pageSize, UserStatus status,
+                                                  OffsetDateTime createdFrom, OffsetDateTime createdTo,
+                                                  String keyword) {
+        PageResult<User> page = userRepository.findPage(pageNum, pageSize, status, createdFrom, createdTo, keyword);
         List<UserProfileView> views = page.records().stream().map(this::toProfileView).toList();
         return PageResult.of(views, page.total(), page.pageNum(), page.pageSize());
     }

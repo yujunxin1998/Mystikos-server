@@ -171,6 +171,11 @@ public class User {
         status = UserStatus.DISABLED;
     }
 
+    /** 管理员删除用户：逻辑删除，账号状态置为 DELETED，不物理删行。 */
+    public void delete() {
+        status = UserStatus.DELETED;
+    }
+
     public boolean hasRole(Role role) {
         return roles.contains(role);
     }

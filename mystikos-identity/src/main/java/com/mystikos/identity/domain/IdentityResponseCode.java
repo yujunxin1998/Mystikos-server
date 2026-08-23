@@ -29,7 +29,8 @@ public enum IdentityResponseCode implements IResponseCode {
     OAUTH_EXCHANGE_FAILED(2016, "第三方登录授权失败，请重新尝试"),
     TAG_NOT_FOUND(2017, "标签不存在"),
     TAG_DISABLED(2018, "标签已停用，不能选择"),
-    REGION_NOT_FOUND(2019, "行政区划编码不存在");
+    REGION_NOT_FOUND(2019, "行政区划编码不存在"),
+    COMPANION_PROFILE_NOT_FOUND(2020, "打手资料不存在");
 
     private final int code;
     private final String message;

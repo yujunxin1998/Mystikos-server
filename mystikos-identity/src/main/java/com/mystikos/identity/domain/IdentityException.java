@@ -95,4 +95,8 @@ public class IdentityException extends BusinessException {
     public static IdentityException regionNotFound(String regionCode) {
         return new IdentityException(IdentityResponseCode.REGION_NOT_FOUND, "行政区划编码不存在：" + regionCode);
     }
+
+    public static IdentityException companionProfileNotFound(Long userId) {
+        return new IdentityException(IdentityResponseCode.COMPANION_PROFILE_NOT_FOUND, "打手资料不存在：" + userId);
+    }
 }

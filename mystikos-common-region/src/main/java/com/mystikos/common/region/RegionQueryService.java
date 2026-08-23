@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -53,7 +54,7 @@ public class RegionQueryService {
         List<RegionNodeView> tree = all.stream()
                 .filter(po -> po.getParentCode() == null)
                 .map(country -> toView(country, childrenByParent.getOrDefault(country.getCode(), List.of())))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
 
         redisTemplate.opsForValue().set(TREE_CACHE_KEY, tree);
         return tree;
@@ -69,10 +70,18 @@ public class RegionQueryService {
         return code != null && regionMapper.selectById(code) != null;
     }
 
+    /**
+     * 这里的 {@code List<RegionNodeView>} 必须是真正的 {@link ArrayList}，不能用
+     * {@code Stream.toList()}/{@code List.of()}——那两个返回的是 JDK 内部不可变 List 实现
+     * （{@code java.util.ImmutableCollections$ListN}），Redis 缓存那边的 Jackson 多态序列化
+     * 能把类名写出去，但反序列化时找不到这个类的可用构造器会直接抛异常
+     * （MismatchedInputException: Unexpected token START_ARRAY）。ArrayList 是 Jackson 认识的
+     * List 默认实现，不会有这个问题。
+     */
     private static RegionNodeView toView(AdministrativeRegionPO po, List<AdministrativeRegionPO> children) {
         List<RegionNodeView> childViews = children.stream()
                 .map(child -> toView(child, List.of()))
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
         return new RegionNodeView(po.getCode(), po.getParentCode(), po.getLevel(), po.getNameZh(), po.getNameEn(),
                 po.getSortOrder(), childViews);
     }

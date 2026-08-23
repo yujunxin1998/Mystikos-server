@@ -1929,6 +1929,10 @@ INSERT INTO public.gifting_catalog_item (id, code, name, icon, price, unlock_rul
 --
 
 INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (1, NULL, 'administrator@mystikos.local', '$2a$10$.sIFVYoV58.JuSrgv5b2ueFFjMsZ8cl5VsrhYouHp/9DW5T1sdG/.', 'ACTIVE', NULL, NULL, '2026-08-22 00:54:43.426514+08', '超级管理员', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (2, NULL, 'member@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '会员测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (3, NULL, 'companion@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '陪玩测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (4, NULL, 'customerservice@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '客服测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
+INSERT INTO public.identity_user (id, phone, email, password_hash, status, membership_tier_level, membership_tier_code, created_at, nickname, privacy_anonymous, gender, avatar_url, birth_date, bio, region_code) VALUES (5, NULL, 'assessor@mystikos.local', '$2a$10$kORc.uSw0lituVY7XkBu4ez3fFkco2YnGsgCKMtebKi2d34Kt087.', 'ACTIVE', NULL, NULL, now(), '考核官测试账号', false, 'UNDISCLOSED', NULL, NULL, NULL, NULL);
 
 
 --
@@ -1978,6 +1982,10 @@ INSERT INTO public.identity_tag_definition (id, category, label, sort_order, ena
 --
 
 INSERT INTO public.identity_user_role (user_id, role) VALUES (1, 'ADMIN');
+INSERT INTO public.identity_user_role (user_id, role) VALUES (2, 'MEMBER');
+INSERT INTO public.identity_user_role (user_id, role) VALUES (3, 'COMPANION');
+INSERT INTO public.identity_user_role (user_id, role) VALUES (4, 'CUSTOMER_SERVICE');
+INSERT INTO public.identity_user_role (user_id, role) VALUES (5, 'ASSESSOR');
 
 
 --

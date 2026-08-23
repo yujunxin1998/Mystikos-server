@@ -34,7 +34,7 @@ public enum IdentityResponseCode implements IResponseCode {
     OAUTH_TRANSACTION_INVALID(2021, "OAuth 登录请求已失效，请重新尝试"),
     COMPANION_APPLICATION_NOT_FOUND(2022, "陪玩申请不存在"),
     COMPANION_APPLICATION_CONTACT_REQUIRED(2023, "联系方式必填：手机号（含国家区号）或邮箱至少提供一项"),
-    COMPANION_APPLICATION_PROFILE_INCOMPLETE(2024, "第三方登录账号需先完善邮箱和手机号才能申请陪玩"),
+    COMPANION_APPLICATION_PROFILE_INCOMPLETE(2024, "请先认证邮箱或手机号其中一项，再申请陪玩"),
     COMPANION_APPLICATION_ALREADY_PENDING(2025, "已有进行中的陪玩申请，请等待审核结果"),
     COMPANION_APPLICATION_ALREADY_COMPANION(2026, "当前账号已是陪玩身份，无需重复申请"),
     COMPANION_APPLICATION_INVALID_STATUS_TRANSITION(2027, "当前申请状态不允许该操作"),
@@ -47,7 +47,8 @@ public enum IdentityResponseCode implements IResponseCode {
     COMPANION_SHOWCASE_INCOMPLETE(2034, "名片内容不完整：至少需要一张照片和一个游戏标签"),
     COMPANION_SHOWCASE_MEDIA_LIMIT_EXCEEDED(2035, "名片媒体数量超出上限"),
     COMPANION_SHOWCASE_REVIEW_REASON_REQUIRED(2036, "审核不通过必须填写原因"),
-    COMPANION_SHOWCASE_NOT_PUBLISHED(2037, "该陪玩尚未发布名片");
+    COMPANION_SHOWCASE_NOT_PUBLISHED(2037, "该陪玩尚未发布名片"),
+    CONTACT_VERIFICATION_REQUIRES_AUTHENTICATION(2038, "绑定联系方式必须先登录");
 
     private final int code;
     private final String message;

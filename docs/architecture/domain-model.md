@@ -83,7 +83,7 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 ### Membership（会员成长，挂在 patronId 上，1:1，**已实现**）
 - `MembershipAccount`(patronId, currentTier, cumulativeSpend, tierUpgradedAt)
 - 等级梯度实现：`mystikos-membership` 的 `DefaultMembershipTier` 枚举（LV1-LV5），是 `MembershipTier` 接口第一次有真实实现，门槛是占位数值（业务确认后直接改枚举）
-- **触发源是临时顶替方案**：应该订阅 `PaymentCaptured`，但 `mystikos-payment` 还没建（S6），先订阅 `mystikos-gifting` 的 `GiftSentEvent`，代码里有 `TODO(payment-integration)` 标记
+- 触发源：订阅 `mystikos-payment` 的 `PaymentCaptured`（覆盖 Booking/Commerce/Gifting，故意排除 `WALLET_RECHARGE`——充值只是把钱挪进自己的余额，不是消费，两边都算会重复计算）。之前订阅 `mystikos-gifting` 的 `GiftSentEvent` 是 Payment 落地前的临时顶替方案，已按当初的 `TODO(payment-integration)` 标记换掉
 - 升级后发布 `MembershipTierUpgradedEvent`，`mystikos-identity` 订阅并同步投影到 `User.membershipTierLevel/Code`（`MembershipTierUpgradedEventListener`）
 
 ### Provider Catalog（陪玩服务目录）
@@ -94,7 +94,7 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 
 ### Booking（预约撮合）
 - `BookingOrder`(id, patronId, companionId, skuId, timeRange: tstzrange, priceSnapshot, status, version)
-- 状态机：`DRAFT → PENDING_PAYMENT → PAID → MATCHING → ACCEPTED → IN_SERVICE → COMPLETED`，旁路 `CANCELLED / EXPIRED / DISPUTED / REFUNDED`
+- 状态机：`DRAFT → PENDING_PAYMENT → PAID → MATCHING → ACCEPTED → IN_SERVICE → COMPLETED`，旁路 `CANCELLED / EXPIRED / DISPUTED / REFUNDED`——`DRAFT → PENDING_PAYMENT → PAID` 已接 `mystikos-payment`（`POST /api/v1/bookings/{id}/payment` 发起结账，`PaymentCaptured` 事件推进到 `PAID`），`PAID` 之后的流转方法仍留在聚合上没接用例
 - 事件：`BookingCreated`、`BookingPaid`、`BookingAccepted`、`BookingCompleted`、`BookingCancelled`
 - **PostgreSQL 落地要点**：`EXCLUDE USING gist (companion_id WITH =, time_range WITH &&) WHERE (status IN ('HELD','PAID','ACCEPTED'))`，数据库层面保证同一陪玩同一时段不会被两个订单占用
 
@@ -103,15 +103,15 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
   - **待补**：`recommendedBy`/`eligibilityRule`（需要陪玩确认授权才能被关联推荐，不是运营单方面打标，要加一个待确认/已确认的状态）这次讨论后决定不做，字段没建，见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)
 - `CartItem`(patronId, productId, quantity)——按 (patronId, productId) 唯一，没有单独的"购物车"聚合包一层
 - `WishlistItem`(patronId, productId, addedAt)
-- `MerchandiseOrder`(id, patronId, items 快照, totalAmount, shippingAddress, status: `DRAFT → PENDING_PAYMENT → PAID → FULFILLING → SHIPPED → COMPLETED`，旁路 `CANCELLED / REFUNDED`)——和 `BookingOrder` 一样，创建后停在 `DRAFT`，没接支付，后续流转方法留在聚合上没接用例
+- `MerchandiseOrder`(id, patronId, items 快照, totalAmount, shippingAddress, status: `DRAFT → PENDING_PAYMENT → PAID → FULFILLING → SHIPPED → COMPLETED`，旁路 `CANCELLED / REFUNDED`)——和 `BookingOrder` 一样，`DRAFT → PENDING_PAYMENT → PAID` 已接 `mystikos-payment`（`POST /api/v1/orders/{id}/payment` 发起结账，`PaymentCaptured` 事件推进到 `PAID`），`PAID` 之后的流转方法仍留在聚合上没接用例
 - `InventoryStock`(productId, availableQty, reservedQty)——下单预占、取消释放
 - 事件：`OrderPlaced`（已实现）；`ProductListed`/`OrderPaid`/`OrderShipped`/`InventoryReserved` 尚未接（对应用例还没做）
 
 ### Gifting（礼物打赏，**已实现**）
 - `GiftCatalogItem`(id, code, name, icon, price, unlockRuleType, unlockRuleThreshold)
   - `unlockRule` 支持的类型：`CUMULATIVE_COUNT`（累计赠送次数）、`CUMULATIVE_SPEND`（累计消费）**已实现评估**——都是 Gifting 自己的流水表能算出来的；`CONSECUTIVE_DAYS`（连续互动天数）、`LEADERBOARD_RANK`（排行榜名次）、`INTIMACY_STAGE`（亲密度阶段）**只存配置，不做解锁判定**——真评估需要 Gifting 反向查询 Leaderboard/Relationship，会和"这两个上下文订阅 Gifting 事件"的方向形成循环模块依赖，Maven 编不过
-- `GiftTransaction`(id, patronId, companionId, giftId, quantity, amount, sentAt)
-- 事件：`GiftSent`（已实现，下游 Relationship/Leaderboard/Membership 都订阅它，见各自小节）
+- `GiftTransaction`(id, patronId, companionId, giftId, quantity, amount, sentAt)——赠礼前先经 `mystikos-payment` 的钱包余额同步扣款（`PaymentPort#debitWallet`），余额不足直接拒绝、不产生这条记录；扣款和记录在同一个事务边界内，扣款失败整体回滚
+- 事件：`GiftSent`（已实现，下游 Relationship/Leaderboard 订阅它；Membership 改为订阅 Payment 的 `PaymentCaptured`，见 Membership 小节）
 
 ### Relationship（亲密度，**已实现**）
 - `IntimacyRecord`(patronId + companionId 唯一, stage: 0-4, progressValue, lastInteractionAt)——落库时代理主键 + 唯一约束模拟复合业务键
@@ -119,12 +119,15 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 目前只订阅 `GiftSent` 累加进度 → 事件：`IntimacyStageChanged`（已实现）；`BookingCompleted` 那一路接不上，因为 `BookingApplicationService` 目前只实现了 `createBooking`，没有任何用例真正推进到 `COMPLETED` 并发事件
 - 只对外暴露只读查询接口 `GET /api/v1/relationships/{patronId}/{companionId}`——Commerce 经 Port 查询 Relationship 做"传奇搭档限定商品"准入校验这条**本轮未接**（讨论后决定 Commerce 先不做推荐关联/准入规则，见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
 
-### Payment & Ledger（支付账本，被 Booking / Commerce / Gifting 共用）
-- `PaymentIntent`(id, sourceType: BOOKING\|MERCHANDISE\|GIFT, sourceId, amount, currency, status: `CREATED → AUTHORIZED → CAPTURED` \| `FAILED` \| `REFUNDED`, gatewayRef, idempotencyKey)
-- `LedgerEntry`（不可变账本行，append-only：intentId, direction: DEBIT\|CREDIT, amount, occurredAt）
-- 事件：`PaymentCaptured`、`PaymentRefunded`
+### Payment & Ledger（支付账本，被 Booking / Commerce / Gifting 共用，**已实现，接入 Stripe**）
+- `PaymentIntent`(id, sourceType: BOOKING\|MERCHANDISE\|GIFT\|WALLET_RECHARGE, sourceId, patronId, amount, currency, status: `CREATED → REQUIRES_ACTION → CAPTURED` \| `FAILED` \| `REFUNDED`, gatewayProvider, gatewayRef, clientSecret, idempotencyKey)
+- `LedgerEntry`（不可变账本行，append-only：intentId, walletId, direction: DEBIT\|CREDIT, amount, currency, occurredAt）
+- `Wallet`(userId, balance, currency)：用户在平台内的记账余额，不是托管资金的持牌电子钱包，真实资金全程留在 Stripe 平台余额里。Booking/Commerce 走一次性 `PaymentIntent`（网关异步回调）；钱包充值也走 `PaymentIntent`（sourceType=WALLET_RECHARGE），到账后credit余额；礼物打赏改为从余额同步扣款（sourceType=GIFT，内部转账，`gatewayProvider="INTERNAL_WALLET"`，创建即 CAPTURED，不经外部网关往返），扣款失败不产生 `GiftTransaction`
+- `WithdrawRequest`(companionId, amount, status: `PENDING_REVIEW → APPROVED → PAID` \| `REJECTED`)：陪玩提现，申请即冻结余额，人工审批通过后调 Stripe Connect Transfer 打款，驳回退回余额；`CompanionPayoutAccount`(userId, stripeConnectAccountId) 是陪玩收款账户与 Stripe Connect 账户的映射
+- 事件：`PaymentCaptured`（Membership 订阅它累计消费，故意排除 WALLET_RECHARGE 避免和 GIFT 重复计算）、`PaymentRefunded`
 - 通过 `sourceType` + `sourceId` 回指业务订单，不持有业务细节，避免与 Booking/Commerce 耦合
-- **待补**：目前只有单笔交易记账（PaymentIntent/LedgerEntry），没有"陪玩收益钱包余额 + 提现申请"这个聚合——PRD 对照发现的缺口，需要加 `Wallet`(userId, balance) 和 `WithdrawRequest`（见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
+- 网关抽象为 `PaymentGatewayClient` 接口（`mystikos-payment` 的 `application/port`），当前唯一实现是 Stripe；新增网关只需要新实现这一个接口
+- **本轮明确未做**：陪玩收益抽成比例（赠礼全额转给陪玩）、身份证实名/未成年人标记同步给 Payment 做充值/赠礼限额拦截、Wallet 多币种换汇（目前每个 Wallet 假设单一结算币种，Booking/Commerce/Gifting 暂时固定用 EUR 结算）
 
 ### Leaderboard & Stats（排行榜，纯读侧，无写聚合，**已实现**）
 - `CompanionCharmStat`(companionId, charmValue)、`PatronGuardStat`(patronId, guardValue)——累计值落库，**排名实时计算**（查询时 `ORDER BY ... LIMIT`），不是原型文案"每周一更新"的冻结快照；要做真正的周榜需要另加 `@Scheduled` 定时任务重算快照，本轮先做实时版本

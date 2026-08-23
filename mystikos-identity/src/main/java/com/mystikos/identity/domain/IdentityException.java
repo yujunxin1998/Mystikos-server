@@ -77,6 +77,10 @@ public class IdentityException extends BusinessException {
         return new IdentityException(IdentityResponseCode.VERIFICATION_CODE_RATE_LIMITED);
     }
 
+    public static IdentityException contactVerificationRequiresAuthentication() {
+        return new IdentityException(IdentityResponseCode.CONTACT_VERIFICATION_REQUIRES_AUTHENTICATION);
+    }
+
     public static IdentityException loginRateLimited() {
         return new IdentityException(IdentityResponseCode.LOGIN_RATE_LIMITED);
     }

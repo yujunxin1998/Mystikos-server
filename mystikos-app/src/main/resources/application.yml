@@ -42,7 +42,7 @@ spring:
   # 下面 properties 走的是 SSL/465（163/QQ 邮箱这类国内厂商的常见方式）；换成 STARTTLS/587 的厂商
   # （Gmail/SendGrid 等）要把 ssl.enable+socketFactory 换回 starttls.enable，这块目前是写死的，不随 host 联动。
   mail:
-    host: ${MAIL_SMTP_HOST:}
+    host: ${MAIL_SMTP_HOST:smtp.163.com}
     port: ${MAIL_SMTP_PORT:465}
     username: ${MAIL_SMTP_USERNAME:}
     password: ${MAIL_SMTP_PASSWORD:}
@@ -117,3 +117,15 @@ mystikos:
       client-id: ${DISCORD_CLIENT_ID:}
       client-secret: ${DISCORD_CLIENT_SECRET:}
       redirect-uri: ${DISCORD_REDIRECT_URI:}
+  # Stripe 支付网关。secret-key 留空时 StripeGatewayClient 这个 Bean 不会注册，
+  # 调支付相关接口会返回"支付网关未配置"而不是启动失败/拿空 key 调 Stripe API。
+  # 去 https://dashboard.stripe.com/test/apikeys 拿测试模式的 key 填到 .env，不要把真实密钥提交进仓库。
+  # webhook-secret 是 Stripe CLI（`stripe listen`）或 Dashboard 里配置的 webhook 端点各自生成的签名密钥，
+  # 不是 secret-key 本身。
+  payment:
+    stripe:
+      secret-key: ${STRIPE_SECRET_KEY:}
+      webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+      # alipay/wechat_pay 需要 Stripe 账户单独开通、且结算币种在 Stripe 支持列表内（不是所有欧洲本币都支持），
+      # 没有额外开通之前不要加进去，Stripe 会直接拒绝建单请求。
+      payment-method-types: ${STRIPE_PAYMENT_METHOD_TYPES:card}

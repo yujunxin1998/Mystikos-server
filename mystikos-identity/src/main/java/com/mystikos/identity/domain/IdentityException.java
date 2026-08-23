@@ -2,6 +2,7 @@ package com.mystikos.identity.domain;
 
 import com.mystikos.common.web.exception.BusinessException;
 import com.mystikos.identity.domain.model.CompanionIdentityApplicationStatus;
+import com.mystikos.identity.domain.model.CompanionShowcaseRevisionStatus;
 import com.mystikos.identity.domain.model.Role;
 
 public class IdentityException extends BusinessException {
@@ -142,5 +143,38 @@ public class IdentityException extends BusinessException {
     public static IdentityException companionApplicationReviewerNotAssessor(Long reviewerId) {
         return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_REVIEWER_NOT_ASSESSOR,
                 "考核人必须是考核官或管理员角色：" + reviewerId);
+    }
+
+    public static IdentityException companionShowcaseRoleRequired(Long userId) {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_ROLE_REQUIRED,
+                "当前账号不是陪玩身份，无法维护名片：" + userId);
+    }
+
+    public static IdentityException companionShowcaseRevisionNotFound(Long id) {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_REVISION_NOT_FOUND,
+                "陪玩名片草稿不存在：" + id);
+    }
+
+    public static IdentityException companionShowcaseInvalidStatusTransition(CompanionShowcaseRevisionStatus status) {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_INVALID_STATUS_TRANSITION,
+                "当前名片状态不允许该操作：" + status);
+    }
+
+    public static IdentityException companionShowcaseIncomplete() {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_INCOMPLETE);
+    }
+
+    public static IdentityException companionShowcaseMediaLimitExceeded(String mediaTypeLabel, int maxCount) {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_MEDIA_LIMIT_EXCEEDED,
+                mediaTypeLabel + "最多上传 " + maxCount + " 个");
+    }
+
+    public static IdentityException companionShowcaseReviewReasonRequired() {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_REVIEW_REASON_REQUIRED);
+    }
+
+    public static IdentityException companionShowcaseNotPublished(Long userId) {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_NOT_PUBLISHED,
+                "该陪玩尚未发布名片：" + userId);
     }
 }

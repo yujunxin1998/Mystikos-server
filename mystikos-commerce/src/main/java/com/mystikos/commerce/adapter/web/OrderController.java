@@ -2,6 +2,7 @@ package com.mystikos.commerce.adapter.web;
 
 import com.mystikos.commerce.adapter.web.dto.CreateOrderRequest;
 import com.mystikos.commerce.adapter.web.dto.OrderResponse;
+import com.mystikos.commerce.adapter.web.dto.PaymentCheckoutResponse;
 import com.mystikos.commerce.application.command.CreateOrderCommand;
 import com.mystikos.commerce.application.service.CommerceApplicationService;
 import com.mystikos.common.result.APIResponse;
@@ -46,6 +47,13 @@ public class OrderController {
     @Operation(summary = "订单详情")
     public APIResponse<OrderResponse> get(@Parameter(description = "订单ID") @PathVariable Long orderId) {
         return APIResponse.ok(OrderResponse.from(commerceApplicationService.getOrder(orderId)));
+    }
+
+    @PostMapping("/{orderId}/payment")
+    @Operation(summary = "发起结账", description = "把订单转 PENDING_PAYMENT，返回前端用 Stripe.js 完成支付所需的 clientSecret")
+    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "订单ID") @PathVariable Long orderId) {
+        return APIResponse.ok(PaymentCheckoutResponse.from(
+                commerceApplicationService.requestPayment(orderId, currentPatronId())));
     }
 
     @PostMapping("/{orderId}/cancel")

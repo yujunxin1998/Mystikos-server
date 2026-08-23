@@ -1,12 +1,15 @@
 package com.mystikos.booking.adapter.web;
 
 import com.mystikos.booking.adapter.web.dto.CreateBookingRequest;
+import com.mystikos.booking.adapter.web.dto.PaymentCheckoutResponse;
 import com.mystikos.booking.application.command.CreateBookingCommand;
 import com.mystikos.booking.application.service.BookingApplicationService;
 import com.mystikos.common.result.APIResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,5 +37,11 @@ public class BookingController {
                 request.getEnd(),
                 request.getPriceSnapshot()));
         return APIResponse.ok(bookingId);
+    }
+
+    @PostMapping("/{id}/payment")
+    @Operation(summary = "发起结账", description = "把预约订单转 PENDING_PAYMENT，返回前端用 Stripe.js 完成支付所需的 clientSecret")
+    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "预约订单ID") @PathVariable Long id) {
+        return APIResponse.ok(PaymentCheckoutResponse.from(bookingApplicationService.requestPayment(id)));
     }
 }

@@ -23,4 +23,8 @@ public class GiftingException extends BusinessException {
     public static GiftingException unlockRuleUnsupported() {
         return new GiftingException(GiftingResponseCode.GIFT_UNLOCK_RULE_UNSUPPORTED);
     }
+
+    public static GiftingException insufficientBalance() {
+        return new GiftingException(GiftingResponseCode.INSUFFICIENT_BALANCE);
+    }
 }

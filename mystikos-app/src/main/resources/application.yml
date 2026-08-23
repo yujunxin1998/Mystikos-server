@@ -4,6 +4,15 @@ server:
   port: 8099
 
 spring:
+  config:
+    # Local development values live in the repository-root .env file, which is ignored by Git.
+    # Deployment environments should inject the same names as real environment variables.
+    import: optional:file:.env[.properties]
+  servlet:
+    multipart:
+      # 与个人资料页的头像限制保持一致；request 需要为 multipart 边界和字段头留出少量空间。
+      max-file-size: ${MAX_UPLOAD_FILE_SIZE:5MB}
+      max-request-size: ${MAX_UPLOAD_REQUEST_SIZE:6MB}
   application:
     name: mystikos-app
   datasource:
@@ -83,7 +92,7 @@ mystikos:
   # access-key/secret-key 生产环境必须换成非默认值，通过环境变量注入。
   oss:
     minio:
-      endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+      endpoint: ${MINIO_ENDPOINT:http://116.62.218.227:9000}
       access-key: ${MINIO_ACCESS_KEY:minioadmin}
       secret-key: ${MINIO_SECRET_KEY:minioadmin}
       bucket: ${MINIO_BUCKET:mystikos}
@@ -95,8 +104,13 @@ mystikos:
     from: ${MAIL_FROM:no-reply@mystikos.local}
   # Discord OAuth2 登录。client-id 留空时 DiscordOAuthClient 这个 Bean 不会注册，
   # /api/v1/auth/oauth/discord/login 会返回"该第三方登录方式暂未开放"而不是拿空凭证去调 Discord API。
-  # redirect-uri 必须和 Discord Developer Portal 应用配置里的 redirect、以及前端发起授权时用的 URI 完全一致。
+  # redirect-uri 是后端 callback 地址，必须和 Discord Developer Portal 中登记的 Redirect 完全一致。
   oauth:
+    # OAuth 完成后只把一次性票据带回前端，Mystikos token 不会出现在 URL 中。
+    frontend-return-uri: ${OAUTH_FRONTEND_RETURN_URI:}
+    # 本地网络需要代理访问 Discord 时配置；生产环境可留空直连。
+    proxy-host: ${OAUTH_PROXY_HOST:}
+    proxy-port: ${OAUTH_PROXY_PORT:0}
     discord:
       client-id: ${DISCORD_CLIENT_ID:}
       client-secret: ${DISCORD_CLIENT_SECRET:}

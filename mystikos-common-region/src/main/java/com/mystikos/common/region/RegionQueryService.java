@@ -1,6 +1,7 @@
 package com.mystikos.common.region;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,18 +11,38 @@ import java.util.stream.Collectors;
 /**
  * 行政区划查询，只读。供前端渲染树状选择器，也供其他模块（目前是
  * mystikos-identity 的 User.regionCode）校验一个 code 是否存在。
+ *
+ * <p>{@code getTree()} 走 Redis 缓存（cache-aside，不设过期时间——这是变动很少的参考数据，
+ * 靠显式失效而不是 TTL 保鲜）：应用启动时由 {@link RegionCacheWarmer} 主动查库写入缓存一次；
+ * 之后谁改了 {@code common_region} 表数据，负责调用 {@link #evictTreeCache()} 让下一次
+ * {@link #getTree()} 重新查库回填——目前代码里还没有会改这张表的写接口（纯 Flyway 种子数据），
+ * 这个方法先留给以后接管理台改行政区划时用。
  */
 @Service
 public class RegionQueryService {
 
-    private final AdministrativeRegionMapper regionMapper;
+    static final String TREE_CACHE_KEY = "common:region:tree";
 
-    public RegionQueryService(AdministrativeRegionMapper regionMapper) {
+    private final AdministrativeRegionMapper regionMapper;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    public RegionQueryService(AdministrativeRegionMapper regionMapper, RedisTemplate<String, Object> redisTemplate) {
         this.regionMapper = regionMapper;
+        this.redisTemplate = redisTemplate;
     }
 
-    /** 全量两层树：国家节点下挂它的一级行政区。 */
+    /** 全量两层树：国家节点下挂它的一级行政区。优先读缓存，未命中才查库回填。 */
+    @SuppressWarnings("unchecked")
     public List<RegionNodeView> getTree() {
+        Object cached = redisTemplate.opsForValue().get(TREE_CACHE_KEY);
+        if (cached != null) {
+            return (List<RegionNodeView>) cached;
+        }
+        return reloadTreeCache();
+    }
+
+    /** 查库重建整棵树并覆盖写入缓存，返回最新结果——应用启动预热、以及数据变更后失效重建都调这个。 */
+    public List<RegionNodeView> reloadTreeCache() {
         List<AdministrativeRegionPO> all = regionMapper.selectList(
                 new LambdaQueryWrapper<AdministrativeRegionPO>().orderByAsc(AdministrativeRegionPO::getSortOrder));
 
@@ -29,10 +50,18 @@ public class RegionQueryService {
                 .filter(po -> po.getParentCode() != null)
                 .collect(Collectors.groupingBy(AdministrativeRegionPO::getParentCode));
 
-        return all.stream()
+        List<RegionNodeView> tree = all.stream()
                 .filter(po -> po.getParentCode() == null)
                 .map(country -> toView(country, childrenByParent.getOrDefault(country.getCode(), List.of())))
                 .toList();
+
+        redisTemplate.opsForValue().set(TREE_CACHE_KEY, tree);
+        return tree;
+    }
+
+    /** 行政区划数据被改了之后调用，删掉缓存，下一次 getTree() 会重新查库回填。 */
+    public void evictTreeCache() {
+        redisTemplate.delete(TREE_CACHE_KEY);
     }
 
     /** 校验一个行政区划编码是否存在（国家或一级行政区均可），供其他模块给用户资料做外键校验。 */

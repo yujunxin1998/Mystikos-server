@@ -18,13 +18,30 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringDocGroupConfig {
 
-    /** Identity & Access（身份与访问）：账号认证、老板资料（含标签目录）、运营态用户与角色管理，见 mystikos-identity。 */
+    /**
+     * Identity & Access（身份与访问）：账号认证、老板资料（含标签目录），见 mystikos-identity。
+     * 运营态用户管理（UserController）挂在 {@code /api/v1/manage/**} 下，归入 {@link #manageApi()}，
+     * 不放在这里——避免同一个上下文的接口被拆到两个分组里，具体见该方法的注释。
+     */
     @Bean
     public GroupedOpenApi identityApi() {
         return GroupedOpenApi.builder()
                 .group("Identity & Access · 身份与访问")
-                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/users/**", "/api/v1/roles/**",
-                        "/api/v1/tags/**")
+                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/roles/**", "/api/v1/tags/**")
+                .build();
+    }
+
+    /**
+     * 后台管理（Manage）：所有挂在 {@code /api/v1/manage/**} 前缀下的运营/管理台接口，
+     * 跨限界上下文统一收口一个分组——这是本文件里唯一按 URL 前缀而不是按限界上下文分组的例外，
+     * 目的是让后台管理接口在文档里集中可见，并与 SecurityConfig 里的鉴权前缀对齐。
+     * 各上下文的管理态 Controller（如 Identity 的 UserController）自己再用 {@code @Tag} 分小节。
+     */
+    @Bean
+    public GroupedOpenApi manageApi() {
+        return GroupedOpenApi.builder()
+                .group("后台管理 · Manage")
+                .pathsToMatch("/api/v1/manage/**")
                 .build();
     }
 

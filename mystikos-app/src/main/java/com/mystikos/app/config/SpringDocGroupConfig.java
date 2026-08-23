@@ -18,12 +18,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class SpringDocGroupConfig {
 
-    /** Identity & Access（身份与访问）：账号认证、老板资料、运营态用户与角色管理，见 mystikos-identity。 */
+    /** Identity & Access（身份与访问）：账号认证、老板资料（含标签目录）、运营态用户与角色管理，见 mystikos-identity。 */
     @Bean
     public GroupedOpenApi identityApi() {
         return GroupedOpenApi.builder()
                 .group("Identity & Access · 身份与访问")
-                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/users/**", "/api/v1/roles/**")
+                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/users/**", "/api/v1/roles/**",
+                        "/api/v1/tags/**")
                 .build();
     }
 
@@ -82,14 +83,15 @@ public class SpringDocGroupConfig {
     }
 
     /**
-     * 文件与对象存储不是业务限界上下文，是 mystikos-common-storage 提供的通用技术能力
-     * （被各业务上下文按需调用），单独归一组，不挂在任何业务上下文名下。
+     * 文件/对象存储、行政区划参考数据都不是业务限界上下文，是被各业务上下文按需调用的
+     * 通用技术能力（分别来自 mystikos-common-storage、mystikos-common-region），
+     * 单独归一组，不挂在任何业务上下文名下。
      */
     @Bean
     public GroupedOpenApi commonCapabilityApi() {
         return GroupedOpenApi.builder()
-                .group("通用能力 · 文件与对象存储")
-                .pathsToMatch("/api/v1/files/**")
+                .group("通用能力 · 文件存储与行政区划")
+                .pathsToMatch("/api/v1/files/**", "/api/v1/regions/**")
                 .build();
     }
 }

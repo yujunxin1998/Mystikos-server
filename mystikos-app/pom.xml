@@ -43,6 +43,11 @@
             <artifactId>mystikos-common-storage</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-region</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.mystikos</groupId>

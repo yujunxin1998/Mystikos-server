@@ -3,6 +3,7 @@ package com.mystikos.identity.domain.model;
 import com.mystikos.common.membership.MembershipTier;
 import com.mystikos.identity.domain.IdentityException;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -23,16 +24,23 @@ public class User {
     private String passwordHash;
     private String nickname;
     private boolean privacyAnonymous;
+    private Gender gender;
+    private String avatarUrl;
+    private LocalDate birthDate;
+    private String bio;
+    private String regionCode;
     private UserStatus status;
     private final Set<Role> roles;
     private final Set<OAuthBinding> oauthBindings;
+    private final Set<Long> tagIds;
     private Integer membershipTierLevel;
     private String membershipTierCode;
     private final OffsetDateTime createdAt;
 
     private User(Long id, String phone, String email, String passwordHash, String nickname,
-                  boolean privacyAnonymous, UserStatus status, Set<Role> roles,
-                  Set<OAuthBinding> oauthBindings, Integer membershipTierLevel,
+                  boolean privacyAnonymous, Gender gender, String avatarUrl, LocalDate birthDate,
+                  String bio, String regionCode, UserStatus status, Set<Role> roles,
+                  Set<OAuthBinding> oauthBindings, Set<Long> tagIds, Integer membershipTierLevel,
                   String membershipTierCode, OffsetDateTime createdAt) {
         boolean hasOAuth = oauthBindings != null && !oauthBindings.isEmpty();
         if (phone == null && email == null && !hasOAuth) {
@@ -44,9 +52,15 @@ public class User {
         this.passwordHash = passwordHash;
         this.nickname = nickname;
         this.privacyAnonymous = privacyAnonymous;
+        this.gender = gender == null ? Gender.UNDISCLOSED : gender;
+        this.avatarUrl = avatarUrl;
+        this.birthDate = birthDate;
+        this.bio = bio;
+        this.regionCode = regionCode;
         this.status = status;
         this.roles = roles.isEmpty() ? EnumSet.noneOf(Role.class) : EnumSet.copyOf(roles);
         this.oauthBindings = hasOAuth ? new HashSet<>(oauthBindings) : new HashSet<>();
+        this.tagIds = tagIds == null ? new HashSet<>() : new HashSet<>(tagIds);
         this.membershipTierLevel = membershipTierLevel;
         this.membershipTierCode = membershipTierCode;
         this.createdAt = createdAt;
@@ -54,23 +68,27 @@ public class User {
 
     /** 手机号或邮箱注册（至少给一个），初始状态 ACTIVE。 */
     public static User register(String phone, String email, String passwordHash, Role initialRole) {
-        return new User(null, phone, email, passwordHash, null, false,
-                UserStatus.ACTIVE, EnumSet.of(initialRole), Set.of(), null, null, OffsetDateTime.now());
+        return new User(null, phone, email, passwordHash, null, false, Gender.UNDISCLOSED, null, null,
+                null, null, UserStatus.ACTIVE, EnumSet.of(initialRole), Set.of(), Set.of(), null, null,
+                OffsetDateTime.now());
     }
 
     /** 第三方登录首次授权、本地找不到对应账号时自动注册。 */
     public static User registerWithOAuth(OAuthBinding binding, Role initialRole) {
-        return new User(null, null, null, null, null, false,
-                UserStatus.ACTIVE, EnumSet.of(initialRole), Set.of(binding), null, null, OffsetDateTime.now());
+        return new User(null, null, null, null, null, false, Gender.UNDISCLOSED, null, null,
+                null, null, UserStatus.ACTIVE, EnumSet.of(initialRole), Set.of(binding), Set.of(), null, null,
+                OffsetDateTime.now());
     }
 
     /** 从持久化数据重建聚合，仅供仓储实现调用。 */
     public static User restore(Long id, String phone, String email, String passwordHash, String nickname,
-                                boolean privacyAnonymous, UserStatus status, Set<Role> roles,
-                                Set<OAuthBinding> oauthBindings, Integer membershipTierLevel,
+                                boolean privacyAnonymous, Gender gender, String avatarUrl, LocalDate birthDate,
+                                String bio, String regionCode, UserStatus status, Set<Role> roles,
+                                Set<OAuthBinding> oauthBindings, Set<Long> tagIds, Integer membershipTierLevel,
                                 String membershipTierCode, OffsetDateTime createdAt) {
-        return new User(id, phone, email, passwordHash, nickname, privacyAnonymous, status, roles,
-                oauthBindings, membershipTierLevel, membershipTierCode, createdAt);
+        return new User(id, phone, email, passwordHash, nickname, privacyAnonymous, gender, avatarUrl,
+                birthDate, bio, regionCode, status, roles, oauthBindings, tagIds, membershipTierLevel,
+                membershipTierCode, createdAt);
     }
 
     /** 绑定一个第三方身份；同一 provider 再次绑定视为更新（比如换绑）。 */
@@ -83,8 +101,35 @@ public class User {
         this.nickname = nickname;
     }
 
+    /**
+     * 老板资料的完整编辑入口（昵称之外的性别/头像/生日/签名/地区）。
+     * birthDate 只是自报展示信息，不作为年龄/未成年人判定依据——那个判定属于
+     * 独立的实名认证流程（见 docs/architecture/prd-alignment.md 缺口2），
+     * 两者故意不互相赋值。
+     */
+    public void updateProfileDetails(String nickname, Gender gender, String avatarUrl, LocalDate birthDate,
+                                      String bio, String regionCode) {
+        this.nickname = nickname;
+        this.gender = gender == null ? Gender.UNDISCLOSED : gender;
+        this.avatarUrl = avatarUrl;
+        this.birthDate = birthDate;
+        this.bio = bio;
+        this.regionCode = regionCode;
+    }
+
     public void updatePrivacy(boolean anonymous) {
         this.privacyAnonymous = anonymous;
+    }
+
+    /**
+     * 整体覆盖当前用户选中的标签（游戏类型等，多选）。合法性校验（标签存在且启用）
+     * 由应用服务在调用前完成——聚合本身不认识 {@link TagDefinition} 仓储。
+     */
+    public void updateTags(Set<Long> tagIds) {
+        this.tagIds.clear();
+        if (tagIds != null) {
+            this.tagIds.addAll(tagIds);
+        }
     }
 
     public void assignRole(Role role) {
@@ -159,6 +204,26 @@ public class User {
         return privacyAnonymous;
     }
 
+    public Gender getGender() {
+        return gender;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public String getRegionCode() {
+        return regionCode;
+    }
+
     public UserStatus getStatus() {
         return status;
     }
@@ -169,6 +234,10 @@ public class User {
 
     public Set<OAuthBinding> getOauthBindings() {
         return Collections.unmodifiableSet(oauthBindings);
+    }
+
+    public Set<Long> getTagIds() {
+        return Collections.unmodifiableSet(tagIds);
     }
 
     public Integer getMembershipTierLevel() {

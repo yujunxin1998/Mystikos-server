@@ -83,4 +83,16 @@ public class IdentityException extends BusinessException {
         return new IdentityException(IdentityResponseCode.OAUTH_EXCHANGE_FAILED,
                 "第三方登录授权失败（" + provider + "）：" + reason);
     }
+
+    public static IdentityException tagNotFound(Long tagId) {
+        return new IdentityException(IdentityResponseCode.TAG_NOT_FOUND, "标签不存在：" + tagId);
+    }
+
+    public static IdentityException tagDisabled(Long tagId) {
+        return new IdentityException(IdentityResponseCode.TAG_DISABLED, "标签已停用：" + tagId);
+    }
+
+    public static IdentityException regionNotFound(String regionCode) {
+        return new IdentityException(IdentityResponseCode.REGION_NOT_FOUND, "行政区划编码不存在：" + regionCode);
+    }
 }

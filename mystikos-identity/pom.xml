@@ -61,6 +61,12 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <!-- User.regionCode 的合法性校验，见 UserApplicationService -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-region</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>dysmsapi20170525</artifactId>
         </dependency>

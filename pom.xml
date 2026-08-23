@@ -21,6 +21,7 @@
         <module>mystikos-common-security</module>
         <module>mystikos-common-cache</module>
         <module>mystikos-common-storage</module>
+        <module>mystikos-common-region</module>
 
         <module>mystikos-identity</module>
         <module>mystikos-membership</module>

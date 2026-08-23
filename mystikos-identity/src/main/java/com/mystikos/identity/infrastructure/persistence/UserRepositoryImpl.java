@@ -1,6 +1,7 @@
 package com.mystikos.identity.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.mystikos.identity.domain.model.Gender;
 import com.mystikos.identity.domain.model.OAuthBinding;
 import com.mystikos.identity.domain.model.Role;
 import com.mystikos.identity.domain.model.User;
@@ -21,12 +22,14 @@ public class UserRepositoryImpl implements UserRepository {
     private final UserMapper userMapper;
     private final UserRoleMapper userRoleMapper;
     private final OAuthBindingMapper oauthBindingMapper;
+    private final UserTagMapper userTagMapper;
 
     public UserRepositoryImpl(UserMapper userMapper, UserRoleMapper userRoleMapper,
-                               OAuthBindingMapper oauthBindingMapper) {
+                               OAuthBindingMapper oauthBindingMapper, UserTagMapper userTagMapper) {
         this.userMapper = userMapper;
         this.userRoleMapper = userRoleMapper;
         this.oauthBindingMapper = oauthBindingMapper;
+        this.userTagMapper = userTagMapper;
     }
 
     @Override
@@ -54,6 +57,11 @@ public class UserRepositoryImpl implements UserRepository {
             bindingPO.setProviderUserId(binding.providerUserId());
             bindingPO.setBoundAt(binding.boundAt());
             oauthBindingMapper.insert(bindingPO);
+        }
+
+        userTagMapper.deleteByUserId(po.getId());
+        for (Long tagId : user.getTagIds()) {
+            userTagMapper.insert(po.getId(), tagId);
         }
 
         return user;
@@ -108,6 +116,8 @@ public class UserRepositoryImpl implements UserRepository {
                 .map(b -> new OAuthBinding(b.getProvider(), b.getProviderUserId(), b.getBoundAt()))
                 .collect(Collectors.toCollection(HashSet::new));
 
+        Set<Long> tagIds = new HashSet<>(userTagMapper.selectTagIdsByUserId(po.getId()));
+
         return User.restore(
                 po.getId(),
                 po.getPhone(),
@@ -115,9 +125,15 @@ public class UserRepositoryImpl implements UserRepository {
                 po.getPasswordHash(),
                 po.getNickname(),
                 Boolean.TRUE.equals(po.getPrivacyAnonymous()),
+                po.getGender() == null ? Gender.UNDISCLOSED : Gender.valueOf(po.getGender()),
+                po.getAvatarUrl(),
+                po.getBirthDate(),
+                po.getBio(),
+                po.getRegionCode(),
                 UserStatus.valueOf(po.getStatus()),
                 roles,
                 bindings,
+                tagIds,
                 po.getMembershipTierLevel(),
                 po.getMembershipTierCode(),
                 po.getCreatedAt());
@@ -131,6 +147,11 @@ public class UserRepositoryImpl implements UserRepository {
         po.setPasswordHash(user.getPasswordHash());
         po.setNickname(user.getNickname());
         po.setPrivacyAnonymous(user.isPrivacyAnonymous());
+        po.setGender(user.getGender().name());
+        po.setAvatarUrl(user.getAvatarUrl());
+        po.setBirthDate(user.getBirthDate());
+        po.setBio(user.getBio());
+        po.setRegionCode(user.getRegionCode());
         po.setStatus(user.getStatus().name());
         po.setMembershipTierLevel(user.getMembershipTierLevel());
         po.setMembershipTierCode(user.getMembershipTierCode());

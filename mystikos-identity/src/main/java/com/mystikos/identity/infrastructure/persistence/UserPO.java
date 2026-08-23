@@ -9,6 +9,7 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 
 /**
@@ -64,6 +65,41 @@ public class UserPO implements Serializable {
     @Schema(description = "是否匿名上榜")
     @TableField("privacy_anonymous")
     private Boolean privacyAnonymous;
+
+    /**
+     * 性别：MALE/FEMALE/UNDISCLOSED，自报展示用
+     */
+    @Schema(description = "性别")
+    @TableField("gender")
+    private String gender;
+
+    /**
+     * 头像地址（对象存储 URL）
+     */
+    @Schema(description = "头像地址")
+    @TableField("avatar_url")
+    private String avatarUrl;
+
+    /**
+     * 生日，仅作资料展示，不作为年龄/实名认证依据
+     */
+    @Schema(description = "生日")
+    @TableField("birth_date")
+    private LocalDate birthDate;
+
+    /**
+     * 个性签名
+     */
+    @Schema(description = "个性签名")
+    @TableField("bio")
+    private String bio;
+
+    /**
+     * 所在地区编码，引用 common_region.code（国家或一级行政区）
+     */
+    @Schema(description = "所在地区编码")
+    @TableField("region_code")
+    private String regionCode;
 
     /**
      * 账号状态：ACTIVE/DISABLED/BANNED

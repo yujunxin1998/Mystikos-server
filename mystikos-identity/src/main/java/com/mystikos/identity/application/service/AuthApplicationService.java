@@ -35,6 +35,7 @@ import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -99,6 +100,26 @@ public class AuthApplicationService {
                 VERIFICATION_CODE_TTL);
         verificationCodeRepository.save(verificationCode);
         verificationCodeSender.send(channel, identifier, code, purpose);
+    }
+
+    /** 向当前用户准备绑定的邮箱或手机号发送验证码。 */
+    @Transactional
+    public void sendContactVerificationCode(Long userId, AuthChannel channel, String identifier) {
+        getUser(userId);
+        String normalized = normalizeIdentifier(channel, identifier);
+        ensureIdentifierAvailable(userId, channel, normalized);
+        sendVerificationCode(channel, normalized, VerificationPurpose.BIND_CONTACT);
+    }
+
+    /** 消费验证码并把邮箱或手机号绑定到当前用户。 */
+    @Transactional
+    public void bindVerifiedContact(Long userId, AuthChannel channel, String identifier, String code) {
+        User user = getUser(userId);
+        String normalized = normalizeIdentifier(channel, identifier);
+        ensureIdentifierAvailable(userId, channel, normalized);
+        consumeVerificationCode(channel, normalized, VerificationPurpose.BIND_CONTACT, code);
+        user.bindContact(channel, normalized);
+        userRepository.save(user);
     }
 
     @Transactional
@@ -230,6 +251,21 @@ public class AuthApplicationService {
         return channel == AuthChannel.PHONE
                 ? userRepository.findByPhone(identifier)
                 : userRepository.findByEmail(identifier);
+    }
+
+    private User getUser(Long userId) {
+        return userRepository.findById(userId).orElseThrow(() -> IdentityException.notFound(userId));
+    }
+
+    private void ensureIdentifierAvailable(Long userId, AuthChannel channel, String identifier) {
+        findByChannel(channel, identifier)
+                .filter(owner -> !owner.getId().equals(userId))
+                .ifPresent(owner -> { throw IdentityException.identifierAlreadyExists(identifier); });
+    }
+
+    private String normalizeIdentifier(AuthChannel channel, String identifier) {
+        String normalized = identifier == null ? "" : identifier.trim();
+        return channel == AuthChannel.EMAIL ? normalized.toLowerCase(Locale.ROOT) : normalized;
     }
 
     private Set<String> roleCodes(User user) {

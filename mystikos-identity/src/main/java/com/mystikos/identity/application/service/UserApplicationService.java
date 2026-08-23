@@ -113,6 +113,14 @@ public class UserApplicationService {
         return toProfileView(getUser(userId));
     }
 
+    public CompanionApplicationReadinessView getCompanionApplicationReadiness(Long userId) {
+        User user = getUser(userId);
+        boolean emailVerified = user.getEmail() != null && !user.getEmail().isBlank();
+        boolean phoneVerified = user.getPhone() != null && !user.getPhone().isBlank();
+        return new CompanionApplicationReadinessView(!user.getOauthBindings().isEmpty(), user.getEmail(),
+                user.getPhone(), emailVerified, phoneVerified, emailVerified || phoneVerified);
+    }
+
     /**
      * 运营态用户列表，按创建时间倒序分页，支持按状态/创建时间范围/关键字（昵称、手机号、邮箱）过滤，见 UserController。
      */

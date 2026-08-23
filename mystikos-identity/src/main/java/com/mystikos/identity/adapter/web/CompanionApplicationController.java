@@ -33,7 +33,7 @@ public class CompanionApplicationController {
 
     @PostMapping
     @Operation(summary = "提交陪玩身份申请",
-            description = "第三方登录账号需先完善邮箱和手机号；已有进行中的申请不能重复提交")
+            description = "账号需至少认证邮箱或手机号其中一项；已有进行中的申请不能重复提交")
     public APIResponse<Long> submit(@Valid @RequestBody SubmitCompanionApplicationRequest request) {
         Long userId = Long.valueOf(CurrentUserContext.get().userId());
         return APIResponse.ok(companionIdentityApplicationService.submit(userId, request));

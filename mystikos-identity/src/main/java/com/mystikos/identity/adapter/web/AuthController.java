@@ -17,6 +17,8 @@ import com.mystikos.identity.application.service.AuthResult;
 import com.mystikos.identity.application.service.OAuthFlowService;
 import com.mystikos.identity.application.service.UserApplicationService;
 import com.mystikos.identity.application.service.UserProfileView;
+import com.mystikos.identity.domain.IdentityException;
+import com.mystikos.identity.domain.model.VerificationPurpose;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -57,6 +59,9 @@ public class AuthController {
     @PostMapping("/verification-codes")
     @Operation(summary = "发送验证码", description = "本地开发环境验证码只打日志，不会真实发送短信/邮件")
     public APIResponse<Void> sendVerificationCode(@Valid @RequestBody SendVerificationCodeRequest request) {
+        if (request.getPurpose() == VerificationPurpose.BIND_CONTACT) {
+            throw IdentityException.contactVerificationRequiresAuthentication();
+        }
         authApplicationService.sendVerificationCode(request.getChannel(), request.getIdentifier(),
                 request.getPurpose());
         return APIResponse.ok();

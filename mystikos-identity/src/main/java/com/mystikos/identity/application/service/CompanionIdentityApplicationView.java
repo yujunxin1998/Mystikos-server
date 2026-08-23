@@ -14,6 +14,7 @@ public record CompanionIdentityApplicationView(
         String applicantNickname,
         String applicantPhone,
         String applicantEmail,
+        String applicantRegionCode,
         String realName,
         Gender gender,
         LocalDate birthDate,

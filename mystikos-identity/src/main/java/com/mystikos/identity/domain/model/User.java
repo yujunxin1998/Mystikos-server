@@ -101,6 +101,15 @@ public class User {
         this.nickname = nickname;
     }
 
+    /** 绑定经过验证码校验的登录标识。验证码消费和唯一性检查由应用服务负责。 */
+    public void bindContact(AuthChannel channel, String identifier) {
+        if (channel == AuthChannel.PHONE) {
+            this.phone = identifier;
+        } else {
+            this.email = identifier;
+        }
+    }
+
     /**
      * 老板资料的完整编辑入口（昵称之外的性别/头像/生日/签名/地区）。
      * birthDate 只是自报展示信息，不作为年龄/未成年人判定依据——那个判定属于

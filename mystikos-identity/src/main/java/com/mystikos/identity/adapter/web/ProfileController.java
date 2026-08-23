@@ -5,6 +5,10 @@ import com.mystikos.common.security.CurrentUserContext;
 import com.mystikos.identity.adapter.web.dto.UpdatePrivacyRequest;
 import com.mystikos.identity.adapter.web.dto.UpdateProfileRequest;
 import com.mystikos.identity.adapter.web.dto.UpdateUserTagsRequest;
+import com.mystikos.identity.adapter.web.dto.ContactVerificationCodeRequest;
+import com.mystikos.identity.adapter.web.dto.VerifyContactRequest;
+import com.mystikos.identity.application.service.AuthApplicationService;
+import com.mystikos.identity.application.service.CompanionApplicationReadinessView;
 import com.mystikos.identity.application.service.UserApplicationService;
 import com.mystikos.identity.application.service.UserProfileView;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +16,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -30,9 +35,12 @@ import java.util.Set;
 public class ProfileController {
 
     private final UserApplicationService userApplicationService;
+    private final AuthApplicationService authApplicationService;
 
-    public ProfileController(UserApplicationService userApplicationService) {
+    public ProfileController(UserApplicationService userApplicationService,
+                             AuthApplicationService authApplicationService) {
         this.userApplicationService = userApplicationService;
+        this.authApplicationService = authApplicationService;
     }
 
     @GetMapping("/me")
@@ -40,6 +48,32 @@ public class ProfileController {
     public APIResponse<UserProfileView> me() {
         Long userId = Long.valueOf(CurrentUserContext.get().userId());
         return APIResponse.ok(userApplicationService.getProfile(userId));
+    }
+
+    @GetMapping("/me/companion-readiness")
+    @Operation(summary = "获取陪玩申请联系方式资格", description = "邮箱或手机号任意认证一项即可申请")
+    public APIResponse<CompanionApplicationReadinessView> companionReadiness() {
+        Long userId = Long.valueOf(CurrentUserContext.get().userId());
+        return APIResponse.ok(userApplicationService.getCompanionApplicationReadiness(userId));
+    }
+
+    @PostMapping("/me/contact-verification-codes")
+    @Operation(summary = "发送联系方式绑定验证码")
+    public APIResponse<Void> sendContactVerificationCode(
+            @Valid @RequestBody ContactVerificationCodeRequest request) {
+        Long userId = Long.valueOf(CurrentUserContext.get().userId());
+        authApplicationService.sendContactVerificationCode(userId, request.getChannel(), request.getIdentifier());
+        return APIResponse.ok();
+    }
+
+    @PutMapping("/me/contacts")
+    @Operation(summary = "验证并绑定邮箱或手机号")
+    public APIResponse<CompanionApplicationReadinessView> bindContact(
+            @Valid @RequestBody VerifyContactRequest request) {
+        Long userId = Long.valueOf(CurrentUserContext.get().userId());
+        authApplicationService.bindVerifiedContact(userId, request.getChannel(), request.getIdentifier(),
+                request.getVerificationCode());
+        return APIResponse.ok(userApplicationService.getCompanionApplicationReadiness(userId));
     }
 
     @PutMapping("/me")

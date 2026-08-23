@@ -51,7 +51,7 @@ public class CompanionIdentityApplicationService {
 
     /**
      * 提交陪玩身份申请。前置校验：已经是陪玩身份的不用再申请；已有进行中申请（SUBMITTED/
-     * IN_ASSESSMENT）的不能重复提交；第三方登录账号必须先完善邮箱和手机号才能申请
+     * IN_ASSESSMENT）的不能重复提交；账号必须至少绑定一个已验证的邮箱或手机号
      * ——申请表单自己的联系方式是独立的考核联系渠道，不能替代账号资料的完整性要求。
      */
     @Transactional
@@ -60,7 +60,7 @@ public class CompanionIdentityApplicationService {
         if (user.hasRole(Role.COMPANION)) {
             throw IdentityException.companionApplicationAlreadyCompanion();
         }
-        if (!user.getOauthBindings().isEmpty() && (user.getEmail() == null || user.getPhone() == null)) {
+        if (user.getEmail() == null && user.getPhone() == null) {
             throw IdentityException.companionApplicationProfileIncomplete();
         }
         if (applicationRepository.existsActiveByUserId(userId)) {
@@ -158,7 +158,7 @@ public class CompanionIdentityApplicationService {
         String reviewerNickname = application.getReviewerId() == null ? null
                 : userRepository.findById(application.getReviewerId()).map(User::getNickname).orElse(null);
         return new CompanionIdentityApplicationView(application.getId(), application.getUserId(),
-                applicant.getNickname(), applicant.getPhone(), applicant.getEmail(), application.getRealName(),
+                applicant.getNickname(), applicant.getPhone(), applicant.getEmail(), applicant.getRegionCode(), application.getRealName(),
                 application.getGender(), application.getBirthDate(), application.getSelfIntro(),
                 application.getGameNickname(), gameRankProofUrl, tags, application.getContactCountryCode(),
                 application.getContactPhone(), application.getContactEmail(), application.getStatus(),

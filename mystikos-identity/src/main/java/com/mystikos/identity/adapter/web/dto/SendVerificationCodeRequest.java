@@ -24,7 +24,7 @@ public class SendVerificationCodeRequest implements Serializable {
     @NotBlank
     private String identifier;
 
-    @Schema(description = "用途：REGISTER/LOGIN/RESET_PASSWORD")
+    @Schema(description = "用途：REGISTER/LOGIN/RESET_PASSWORD；BIND_CONTACT 仅由登录后的资料接口使用")
     @NotNull
     private VerificationPurpose purpose;
 }

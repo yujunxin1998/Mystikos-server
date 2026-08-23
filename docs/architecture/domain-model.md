@@ -62,12 +62,13 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 ## 3. 聚合 / 实体 / 值对象设计
 
 ### Identity & Access（身份与访问，S1+S2 老板侧已实现，见 mystikos-identity）
-- `User`(id, phone?, email?, passwordHash?, nickname?, privacyAnonymous, status: ACTIVE\|DISABLED\|BANNED, roles: Set&lt;Role&gt;, oauthBindings: Set&lt;OAuthBinding&gt;, membershipTierLevel: Integer?, membershipTierCode: String?, createdAt)。**没有 username 字段**——手机号/邮箱二选一即可注册，不强制都填，也不需要额外的用户名；唯一性约束在 phone/email 各自的非空值上。
+- `User`(id, phone?, email?, passwordHash?, nickname?, privacyAnonymous, gender: MALE\|FEMALE\|UNDISCLOSED, avatarUrl?, birthDate?, bio?, regionCode?, tagIds: Set&lt;Long&gt;, status: ACTIVE\|DISABLED\|BANNED, roles: Set&lt;Role&gt;, oauthBindings: Set&lt;OAuthBinding&gt;, membershipTierLevel: Integer?, membershipTierCode: String?, createdAt)。**没有 username 字段**——手机号/邮箱二选一即可注册，不强制都填，也不需要额外的用户名；唯一性约束在 phone/email 各自的非空值上。`birthDate` 只是资料展示字段，故意不与"实名认证/未成年人标记"这个未来才会补的、独立且权威的判定字段互相赋值，避免自报生日被误当年龄证明，见第 70 行。
 - `OAuthBinding`(provider: String, providerUserId, boundAt)：provider 是字符串不是枚举，接入新的第三方登录供应商（Discord/微信……）不用改这个值对象。一个用户可以绑多个 provider。
 - `Role` 枚举（固定 6 个，不做运行时可增删的动态角色）：GUEST 游客、MEMBER 会员用户、COMPANION 陪玩、CUSTOMER_SERVICE 客服、ASSESSOR 考核官、ADMIN 管理员。一个用户可以同时拥有多个角色（比如既是会员又是陪玩）。**Java 枚举仍是行为/展示名的权威来源**，`identity_role` 表（code/displayName/sortOrder）是枚举的数据库镜像，只用来给 `identity_user_role`/`identity_role_permission` 提供外键完整性——新增角色要同时改枚举和加一行种子数据，两边手动保持同步，不是运行时可通过接口新增角色。`GET /api/v1/roles` 直接读枚举返回，不查表。
 - 权限（RBAC 的 P）：`identity_role_permission`(role, permission_code) 关联表驱动，不是独立聚合——权限编码由业务后续定义，框架里不预置任何编码。`ADMIN` 角色隐含拥有全部权限（`resolvePermissions` 返回通配符 `"*"`），不查表。
 - 会员等级：只存 `membershipTierLevel`/`membershipTierCode` 两个字段，具体梯度（有几级、门槛多少）由 [`MembershipTier`](../../mystikos-common/src/main/java/com/mystikos/common/membership/MembershipTier.java) 接口的某个实现给出——**这个接口目前没有任何实现，梯度故意留空**，业务定义后接一个枚举或配置表实现即可，`User.updateMembershipTier(MembershipTier)` 不用跟着改。
-- 老板侧资料（S2）：`nickname`、`privacyAnonymous`（匿名上榜）已实现，见 `ProfileController`。陪玩侧资料（标签/时薪/擅长游戏/认证审核）属于 `mystikos-provider-catalog`，尚未建设。
+- 老板侧资料（S2）：`nickname`、`privacyAnonymous`（匿名上榜）、`gender`/`avatarUrl`/`birthDate`/`bio`/`regionCode`/`tagIds` 都已实现，见 `ProfileController`。陪玩侧资料（标签/时薪/擅长游戏/认证审核）属于 `mystikos-provider-catalog`，尚未建设，跟这里的 `tagIds`（游戏类型偏好，后台配置目录 `TagDefinition`，`identity_tag_definition`/`identity_user_tag`）不是一回事，字面上都叫"标签"但归属和用途都不同。
+  - `regionCode` 引用 `common_region.code`（国家或一级行政区的 ISO 3166-1/3166-2 编码），DB 层没有外键约束——`common_region` 是 `mystikos-common-region` 这个独立 Maven 模块提供的只读参考数据（国家+一级行政区两层树，目前种子数据覆盖欧洲），合法性校验在 `UserApplicationService` 里调用 `RegionQueryService.exists()` 完成。这个模块不是限界上下文，定位跟 `mystikos-common-storage`（对象存储）一样：纯技术能力，任何业务模块要用地区数据都可以直接依赖它，不用各自建一份。
 - **认证（S1，已实现）**：
   - `VerificationCode`(channel, identifier, purpose, code, expiresAt, consumedAt) — 一次性验证码，5 分钟有效期，消费即失效
   - `RefreshToken`(userId, tokenHash, expiresAt, revokedAt) — 持久化的不透明串（存哈希），可主动吊销，不是 JWT
@@ -79,10 +80,11 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 鉴权范围：目前只收紧了 `/api/v1/users/*/roles/**`、`/api/v1/users/*/ban`、`/api/v1/profile/**`、`/api/v1/auth/me`、`/api/v1/auth/logout`；其他模块（Booking 等）的接口鉴权范围留给各自模块设计需求时收紧。
 - **待补**（PRD 对照发现的缺口，S1/S2 范围内仍未做的）：实名认证与未成年人标记（`is_minor`）需要新增校验记录，并同步给 `mystikos-payment` 做充值/赠礼限额拦截（见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）；refresh token 没做轮换（reuse 同一个 refresh token 换 access token，没有滑动过期或一次性轮换）。
 
-### Membership（会员成长，挂在 patronId 上，1:1，尚未实现）
+### Membership（会员成长，挂在 patronId 上，1:1，**已实现**）
 - `MembershipAccount`(patronId, currentTier, cumulativeSpend, tierUpgradedAt)
-- `TierRule`（配置：等级、消费阈值、权益列表，非聚合，静态配置表）——这应该是 `MembershipTier` 接口的权威实现归属地
-- 订阅 `PaymentCaptured` 累加消费 → 事件：`MembershipSpendAccrued`、`MembershipTierUpgraded`
+- 等级梯度实现：`mystikos-membership` 的 `DefaultMembershipTier` 枚举（LV1-LV5），是 `MembershipTier` 接口第一次有真实实现，门槛是占位数值（业务确认后直接改枚举）
+- **触发源是临时顶替方案**：应该订阅 `PaymentCaptured`，但 `mystikos-payment` 还没建（S6），先订阅 `mystikos-gifting` 的 `GiftSentEvent`，代码里有 `TODO(payment-integration)` 标记
+- 升级后发布 `MembershipTierUpgradedEvent`，`mystikos-identity` 订阅并同步投影到 `User.membershipTierLevel/Code`（`MembershipTierUpgradedEventListener`）
 
 ### Provider Catalog（陪玩服务目录）
 - `CompanionProfile`(companionId, displayName, avatarUrl, bio, tags, languages, region, status: PENDING_REVIEW\|ACTIVE\|SUSPENDED, avgRating)
@@ -96,25 +98,26 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 事件：`BookingCreated`、`BookingPaid`、`BookingAccepted`、`BookingCompleted`、`BookingCancelled`
 - **PostgreSQL 落地要点**：`EXCLUDE USING gist (companion_id WITH =, time_range WITH &&) WHERE (status IN ('HELD','PAID','ACCEPTED'))`，数据库层面保证同一陪玩同一时段不会被两个订单占用
 
-### Commerce（商城）
-- `Product`(id, categoryId, name, description, price, images, status: ON_SHELF\|OFF_SHELF, recommendedBy: companionId?, eligibilityRule: JSONB?)
-  - **待补**：`recommendedBy` 目前只是个字段，实际需要陪玩确认授权才能被关联推荐（不是运营单方面打标），要加一个待确认/已确认的状态（见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
-- `Cart`(patronId, items[])
-- `Wishlist`(patronId, productIds[])
-- `MerchandiseOrder`(id, patronId, items 快照, totalAmount, shippingAddress, status: `DRAFT → PENDING_PAYMENT → PAID → FULFILLING → SHIPPED → COMPLETED`，旁路 `CANCELLED / REFUNDED`)
-- `InventoryStock`(productId, availableQty, reservedQty)
-- 事件：`ProductListed`、`OrderPlaced`、`OrderPaid`、`OrderShipped`、`InventoryReserved`
+### Commerce（商城，**已实现**）
+- `Product`(id, categoryId, name, description, price, images, status: ON_SHELF\|OFF_SHELF)
+  - **待补**：`recommendedBy`/`eligibilityRule`（需要陪玩确认授权才能被关联推荐，不是运营单方面打标，要加一个待确认/已确认的状态）这次讨论后决定不做，字段没建，见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)
+- `CartItem`(patronId, productId, quantity)——按 (patronId, productId) 唯一，没有单独的"购物车"聚合包一层
+- `WishlistItem`(patronId, productId, addedAt)
+- `MerchandiseOrder`(id, patronId, items 快照, totalAmount, shippingAddress, status: `DRAFT → PENDING_PAYMENT → PAID → FULFILLING → SHIPPED → COMPLETED`，旁路 `CANCELLED / REFUNDED`)——和 `BookingOrder` 一样，创建后停在 `DRAFT`，没接支付，后续流转方法留在聚合上没接用例
+- `InventoryStock`(productId, availableQty, reservedQty)——下单预占、取消释放
+- 事件：`OrderPlaced`（已实现）；`ProductListed`/`OrderPaid`/`OrderShipped`/`InventoryReserved` 尚未接（对应用例还没做）
 
-### Gifting（礼物打赏）
-- `GiftCatalogItem`(id, name, icon, price, unlockRule: JSONB)
-  - `unlockRule` 支持的类型：`CUMULATIVE_COUNT`（累计赠送次数）、`CUMULATIVE_SPEND`（累计消费）、`CONSECUTIVE_DAYS`（连续互动天数）、`LEADERBOARD_RANK`（排行榜名次）、`INTIMACY_STAGE`（亲密度阶段）—— 用策略模式 + JSONB 配置，避免为每种规则建子表
+### Gifting（礼物打赏，**已实现**）
+- `GiftCatalogItem`(id, code, name, icon, price, unlockRuleType, unlockRuleThreshold)
+  - `unlockRule` 支持的类型：`CUMULATIVE_COUNT`（累计赠送次数）、`CUMULATIVE_SPEND`（累计消费）**已实现评估**——都是 Gifting 自己的流水表能算出来的；`CONSECUTIVE_DAYS`（连续互动天数）、`LEADERBOARD_RANK`（排行榜名次）、`INTIMACY_STAGE`（亲密度阶段）**只存配置，不做解锁判定**——真评估需要 Gifting 反向查询 Leaderboard/Relationship，会和"这两个上下文订阅 Gifting 事件"的方向形成循环模块依赖，Maven 编不过
 - `GiftTransaction`(id, patronId, companionId, giftId, quantity, amount, sentAt)
-- 事件：`GiftSent`
+- 事件：`GiftSent`（已实现，下游 Relationship/Leaderboard/Membership 都订阅它，见各自小节）
 
-### Relationship（亲密度）
-- `IntimacyRecord`(patronId + companionId 复合主键, stage: 0-4, progressValue, lastInteractionAt)
-- 订阅 `BookingCompleted` + `GiftSent` 累加进度 → 事件：`IntimacyStageChanged`
-- 只对外暴露只读查询接口 `getIntimacyStage(patronId, companionId)`，供 Commerce 的准入规则校验使用 —— **这是"传奇搭档限定商品"跨域校验的正确落点**：Commerce 下单校验经 Port 查询 Relationship，不直接读其表
+### Relationship（亲密度，**已实现**）
+- `IntimacyRecord`(patronId + companionId 唯一, stage: 0-4, progressValue, lastInteractionAt)——落库时代理主键 + 唯一约束模拟复合业务键
+- 阶段门槛（`IntimacyStagePolicy`）是占位值，业务确认后直接改常量
+- 目前只订阅 `GiftSent` 累加进度 → 事件：`IntimacyStageChanged`（已实现）；`BookingCompleted` 那一路接不上，因为 `BookingApplicationService` 目前只实现了 `createBooking`，没有任何用例真正推进到 `COMPLETED` 并发事件
+- 只对外暴露只读查询接口 `GET /api/v1/relationships/{patronId}/{companionId}`——Commerce 经 Port 查询 Relationship 做"传奇搭档限定商品"准入校验这条**本轮未接**（讨论后决定 Commerce 先不做推荐关联/准入规则，见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
 
 ### Payment & Ledger（支付账本，被 Booking / Commerce / Gifting 共用）
 - `PaymentIntent`(id, sourceType: BOOKING\|MERCHANDISE\|GIFT, sourceId, amount, currency, status: `CREATED → AUTHORIZED → CAPTURED` \| `FAILED` \| `REFUNDED`, gatewayRef, idempotencyKey)
@@ -123,10 +126,9 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 通过 `sourceType` + `sourceId` 回指业务订单，不持有业务细节，避免与 Booking/Commerce 耦合
 - **待补**：目前只有单笔交易记账（PaymentIntent/LedgerEntry），没有"陪玩收益钱包余额 + 提现申请"这个聚合——PRD 对照发现的缺口，需要加 `Wallet`(userId, balance) 和 `WithdrawRequest`（见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
 
-### Leaderboard & Stats（排行榜，纯读侧，无写聚合）
-- `CompanionRankingSnapshot`(companionId, charmValue, rankNo, weekOf)
-- `PatronRankingSnapshot`(patronId, guardValue, rankNo, weekOf)
-- 订阅 `BookingCompleted` + `GiftSent` 累加数值，定时任务周期重算排名快照（CQRS Projection）
+### Leaderboard & Stats（排行榜，纯读侧，无写聚合，**已实现**）
+- `CompanionCharmStat`(companionId, charmValue)、`PatronGuardStat`(patronId, guardValue)——累计值落库，**排名实时计算**（查询时 `ORDER BY ... LIMIT`），不是原型文案"每周一更新"的冻结快照；要做真正的周榜需要另加 `@Scheduled` 定时任务重算快照，本轮先做实时版本
+- 目前只订阅 `GiftSent` 累加数值；`BookingCompleted` 那一路接不上，理由同 Relationship 小节
 
 ### Review（评价，**排期降级，见下**）
 - `Review`(id, bookingOrderId, patronId, companionId, rating: 1-5, comment, status: PUBLISHED\|HIDDEN)

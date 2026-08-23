@@ -3,10 +3,15 @@
 `mystikos-app` 本身不在这里定义镜像——应用是 `mvn package` 出来的可执行 jar，
 这里只管它依赖的三个基础设施服务（数据库、缓存、对象存储）在本地/自建环境怎么起。
 
-当前形态：每个服务一条独立的 `docker run` 命令，本地开发够用、命令本身就是文档，
-不用先学 compose 语法。等这几个服务的配置（网络、数据卷、环境变量）稳定下来，
-再合并成一份 `docker-compose.yaml`（同目录），到时候本文件的 `docker run` 命令
-原样保留作为"不想用 compose 时的手动等价物"。
+**推荐用 compose 一次起三个服务**（同目录 `docker-compose.yaml`，镜像版本/挂载路径/环境变量跟下面的 `docker run` 命令逐条对应）：
+
+```powershell
+docker compose -f deploy\docker\docker-compose.yaml up -d
+```
+
+`btree_gist` 扩展也自动装好了（`postgres-init\01-btree-gist.sql` 挂到 PostgreSQL 官方镜像认的 `/docker-entrypoint-initdb.d/`，只在数据目录第一次 initdb 时自动跑一次）——**前提是 `local-docker\postgres\data` 是全新空目录**；如果你之前用手动 `docker run` 起过库、目录已经初始化过，这个脚本不会重跑，仍需按下面 PostgreSQL 一节手动执行一次 `CREATE EXTENSION`。
+
+下面每个服务一条独立的 `docker run` 命令原样保留，作为不想用 compose 时的手动等价物，也是理解每个服务具体怎么配置的文档。
 
 ## 数据/配置挂载位置
 

@@ -1,0 +1,65 @@
+# 本地开发依赖服务：PostgreSQL / Redis / MinIO。
+# 镜像版本、挂载路径、环境变量都跟 README.md 里对应服务的 `docker run` 命令保持一致
+# （那份手动命令原样保留，作为不想用 compose 时的等价物）。
+# 用法：docker compose -f deploy/docker/docker-compose.yaml up -d
+
+name: mystikos
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: mystikos-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: mystikos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - F:/javaproj/Mystikos/local-docker/postgres/data:/var/lib/postgresql/data
+      # EXCLUDE USING gist 约束依赖的 btree_gist 扩展，只在数据目录第一次初始化时自动跑一次
+      # （官方镜像的约定：/docker-entrypoint-initdb.d/ 下的脚本只在 initdb 时执行）。
+      # 如果 local-docker/postgres/data 已经初始化过（比如从手动 docker run 迁过来的），
+      # 这个脚本不会重跑，仍需手动执行一次 README 里那条 CREATE EXTENSION 命令。
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mystikos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: mystikos-redis
+    restart: unless-stopped
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - F:/javaproj/Mystikos/local-docker/redis/config/redis.conf:/usr/local/etc/redis/redis.conf
+      - F:/javaproj/Mystikos/local-docker/redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z-cpuv1
+    container_name: mystikos-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - F:/javaproj/Mystikos/local-docker/minIo/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

@@ -110,17 +110,41 @@
             <version>${project.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-        </dependency>
-
         <!-- Knife4j：只在最终可执行 jar 里引入，业务模块只需要 swagger-annotations-jakarta（见 mystikos-common） -->
         <dependency>
             <groupId>com.github.xiaoymin</groupId>
             <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
+
+    <!--
+        flyway-core 挪进 profile，不再是无条件依赖：
+        - `local`（默认，不用显式指定）：带 Flyway，`spring.flyway.enabled=true` 时启动自动按
+          deploy/sql/V1..N 增量迁移，本地开发/联调用这个。
+        - `deploy`（`mvn package -Pdeploy` 显式指定）：不带 flyway-core——classpath 里没有这个类，
+          Spring Boot 的 FlywayAutoConfiguration 直接不激活，启动完全不碰 Flyway，也不会去读
+          deploy/sql/ 下的版本化脚本。线上/测试环境部署前手动执行一次 deploy/init.sql
+          初始化数据库（見该文件顶部注释），之后的表结构变更由人工手动 ALTER，不再用这条 Flyway 路径。
+        Maven 的 activeByDefault 规则：一旦命令行用 -P 显式激活了任何 profile（比如 -Pdeploy），
+        activeByDefault 的 profile 会自动让位，不用额外传 -P!local 去关掉它。
+    -->
+    <profiles>
+        <profile>
+            <id>local</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>org.flywaydb</groupId>
+                    <artifactId>flyway-core</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>deploy</id>
+        </profile>
+    </profiles>
 
     <build>
         <finalName>mystikos-app</finalName>

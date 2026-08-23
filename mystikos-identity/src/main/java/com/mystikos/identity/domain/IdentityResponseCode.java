@@ -30,7 +30,17 @@ public enum IdentityResponseCode implements IResponseCode {
     TAG_NOT_FOUND(2017, "标签不存在"),
     TAG_DISABLED(2018, "标签已停用，不能选择"),
     REGION_NOT_FOUND(2019, "行政区划编码不存在"),
-    COMPANION_PROFILE_NOT_FOUND(2020, "打手资料不存在");
+    COMPANION_PROFILE_NOT_FOUND(2020, "打手资料不存在"),
+    OAUTH_TRANSACTION_INVALID(2021, "OAuth 登录请求已失效，请重新尝试"),
+    COMPANION_APPLICATION_NOT_FOUND(2022, "陪玩申请不存在"),
+    COMPANION_APPLICATION_CONTACT_REQUIRED(2023, "联系方式必填：手机号（含国家区号）或邮箱至少提供一项"),
+    COMPANION_APPLICATION_PROFILE_INCOMPLETE(2024, "第三方登录账号需先完善邮箱和手机号才能申请陪玩"),
+    COMPANION_APPLICATION_ALREADY_PENDING(2025, "已有进行中的陪玩申请，请等待审核结果"),
+    COMPANION_APPLICATION_ALREADY_COMPANION(2026, "当前账号已是陪玩身份，无需重复申请"),
+    COMPANION_APPLICATION_INVALID_STATUS_TRANSITION(2027, "当前申请状态不允许该操作"),
+    COMPANION_APPLICATION_REVIEWER_REQUIRED(2028, "考核人不能为空"),
+    COMPANION_APPLICATION_RESULT_REQUIRED(2029, "考核结果不能为空"),
+    COMPANION_APPLICATION_REVIEWER_NOT_ASSESSOR(2030, "考核人必须是考核官或管理员角色");
 
     private final int code;
     private final String message;

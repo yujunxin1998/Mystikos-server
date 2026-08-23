@@ -15,16 +15,20 @@ import java.util.List;
  * {@link UserTagMapper} 一样用注解式 SQL，不建 XML 文件（本项目约定不用 XML mapper）。
  * PageHelper 的分页拦截器在 MyBatis Executor 层生效，不区分 XML/注解/BaseMapper，
  * 调用前照常 {@code PageHelper.startPage(...)} 即可。
+ * <p>
+ * 所有查询固定只看 {@code identity_status = 'ACTIVE'} 的台账行——身份被收回的打手不算
+ * 在"打手列表"/统计卡片里，但历史资料仍保留在表里（见 {@link com.mystikos.identity.domain.model.CompanionProfile#revoke()}）。
  */
 @Mapper
 public interface CompanionQueryMapper {
 
     @Select("<script>"
-            + "SELECT u.id AS user_id, u.phone, u.email, u.nickname, u.avatar_url, u.created_at, "
-            + "c.level, c.skill_tags, c.hourly_rate, c.companion_status, c.id_card_no, "
+            + "SELECT u.id AS user_id, u.phone, u.email, u.nickname, u.avatar_object_key AS avatar_url, u.created_at, "
+            + "c.level, c.hourly_rate, c.companion_status, c.id_card_no, "
             + "c.bank_account_name, c.bank_account_no, c.bank_name "
             + "FROM identity_companion_profile c JOIN identity_user u ON u.id = c.user_id "
             + "<where>"
+            + "c.identity_status = 'ACTIVE' "
             + "<if test='status != null'>AND c.companion_status = #{status}</if> "
             + "<if test='keyword != null'>AND (u.nickname LIKE CONCAT('%',#{keyword},'%') "
             + "OR u.phone LIKE CONCAT('%',#{keyword},'%') OR c.id_card_no LIKE CONCAT('%',#{keyword},'%'))</if> "
@@ -37,15 +41,17 @@ public interface CompanionQueryMapper {
                                  @Param("createdFrom") OffsetDateTime createdFrom,
                                  @Param("createdTo") OffsetDateTime createdTo);
 
-    @Select("SELECT count(*) FROM identity_companion_profile")
+    @Select("SELECT count(*) FROM identity_companion_profile WHERE identity_status = 'ACTIVE'")
     long countTotal();
 
-    @Select("SELECT count(*) FROM identity_companion_profile WHERE companion_status = 'AVAILABLE'")
+    @Select("SELECT count(*) FROM identity_companion_profile "
+            + "WHERE identity_status = 'ACTIVE' AND companion_status = 'AVAILABLE'")
     long countAvailable();
 
-    @Select("SELECT count(*) FROM identity_companion_profile WHERE companion_status = 'BUSY'")
+    @Select("SELECT count(*) FROM identity_companion_profile "
+            + "WHERE identity_status = 'ACTIVE' AND companion_status = 'BUSY'")
     long countBusy();
 
-    @Select("SELECT COALESCE(AVG(hourly_rate), 0) FROM identity_companion_profile")
+    @Select("SELECT COALESCE(AVG(hourly_rate), 0) FROM identity_companion_profile WHERE identity_status = 'ACTIVE'")
     BigDecimal avgHourlyRate();
 }

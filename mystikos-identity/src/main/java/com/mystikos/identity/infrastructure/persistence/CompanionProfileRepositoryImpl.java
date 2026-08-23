@@ -3,6 +3,7 @@ package com.mystikos.identity.infrastructure.persistence;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.identity.domain.model.CompanionIdentityStatus;
 import com.mystikos.identity.domain.model.CompanionProfile;
 import com.mystikos.identity.domain.model.CompanionStats;
 import com.mystikos.identity.domain.model.CompanionStatus;
@@ -12,19 +13,23 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public class CompanionProfileRepositoryImpl implements CompanionProfileRepository {
 
     private final CompanionProfileMapper companionProfileMapper;
+    private final CompanionProfileTagMapper companionProfileTagMapper;
     private final CompanionQueryMapper companionQueryMapper;
 
     public CompanionProfileRepositoryImpl(CompanionProfileMapper companionProfileMapper,
+                                           CompanionProfileTagMapper companionProfileTagMapper,
                                            CompanionQueryMapper companionQueryMapper) {
         this.companionProfileMapper = companionProfileMapper;
+        this.companionProfileTagMapper = companionProfileTagMapper;
         this.companionQueryMapper = companionQueryMapper;
     }
 
@@ -37,6 +42,10 @@ public class CompanionProfileRepositoryImpl implements CompanionProfileRepositor
         } else {
             companionProfileMapper.updateById(po);
         }
+        companionProfileTagMapper.deleteByUserId(po.getUserId());
+        for (Long tagId : profile.getTagIds()) {
+            companionProfileTagMapper.insert(po.getUserId(), tagId);
+        }
         return profile;
     }
 
@@ -44,17 +53,6 @@ public class CompanionProfileRepositoryImpl implements CompanionProfileRepositor
     public Optional<CompanionProfile> findByUserId(Long userId) {
         CompanionProfilePO po = companionProfileMapper.selectById(userId);
         return Optional.ofNullable(po).map(this::toDomain);
-    }
-
-    @Override
-    public boolean existsByUserId(Long userId) {
-        return companionProfileMapper.selectById(userId) != null;
-    }
-
-    @Override
-    @Transactional
-    public void deleteByUserId(Long userId) {
-        companionProfileMapper.deleteById(userId);
     }
 
     @Override
@@ -67,7 +65,7 @@ public class CompanionProfileRepositoryImpl implements CompanionProfileRepositor
                 hasKeyword ? keyword : null,
                 createdFrom, createdTo);
         PageInfo<CompanionRowPO> pageInfo = new PageInfo<>(rows);
-        List<CompanionSummary> summaries = rows.stream().map(CompanionProfileRepositoryImpl::toSummary).toList();
+        List<CompanionSummary> summaries = rows.stream().map(this::toSummary).toList();
         return PageResult.of(summaries, pageInfo.getTotal(), pageNum, pageSize);
     }
 
@@ -84,9 +82,9 @@ public class CompanionProfileRepositoryImpl implements CompanionProfileRepositor
         CompanionProfilePO po = new CompanionProfilePO();
         po.setUserId(profile.getUserId());
         po.setLevel(profile.getLevel());
-        po.setSkillTags(profile.getSkillTags().isEmpty() ? null : String.join(",", profile.getSkillTags()));
         po.setHourlyRate(profile.getHourlyRate());
         po.setCompanionStatus(profile.getStatus().name());
+        po.setIdentityStatus(profile.getIdentityStatus().name());
         po.setIdCardNo(profile.getIdCardNo());
         po.setBankAccountName(profile.getBankAccountName());
         po.setBankAccountNo(profile.getBankAccountNo());
@@ -96,22 +94,20 @@ public class CompanionProfileRepositoryImpl implements CompanionProfileRepositor
     }
 
     private CompanionProfile toDomain(CompanionProfilePO po) {
-        return CompanionProfile.restore(po.getUserId(), po.getLevel(), splitTags(po.getSkillTags()),
-                po.getHourlyRate(), CompanionStatus.valueOf(po.getCompanionStatus()), po.getIdCardNo(),
-                po.getBankAccountName(), po.getBankAccountNo(), po.getBankName(), po.getCreatedAt());
+        Set<Long> tagIds = new HashSet<>(companionProfileTagMapper.selectTagIdsByUserId(po.getUserId()));
+        return CompanionProfile.restore(po.getUserId(), po.getLevel(), tagIds, po.getHourlyRate(),
+                CompanionStatus.valueOf(po.getCompanionStatus()),
+                po.getIdentityStatus() == null ? CompanionIdentityStatus.ACTIVE
+                        : CompanionIdentityStatus.valueOf(po.getIdentityStatus()),
+                po.getIdCardNo(), po.getBankAccountName(), po.getBankAccountNo(), po.getBankName(),
+                po.getCreatedAt());
     }
 
-    private static CompanionSummary toSummary(CompanionRowPO row) {
+    private CompanionSummary toSummary(CompanionRowPO row) {
+        Set<Long> tagIds = new HashSet<>(companionProfileTagMapper.selectTagIdsByUserId(row.getUserId()));
         return new CompanionSummary(row.getUserId(), row.getPhone(), row.getEmail(), row.getNickname(),
                 row.getAvatarUrl(), CompanionStatus.valueOf(row.getCompanionStatus()), row.getLevel(),
-                splitTags(row.getSkillTags()), row.getHourlyRate(), row.getIdCardNo(), row.getBankAccountName(),
+                tagIds, row.getHourlyRate(), row.getIdCardNo(), row.getBankAccountName(),
                 row.getBankAccountNo(), row.getBankName(), row.getCreatedAt());
-    }
-
-    private static List<String> splitTags(String skillTags) {
-        if (skillTags == null || skillTags.isBlank()) {
-            return List.of();
-        }
-        return Arrays.stream(skillTags.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
     }
 }

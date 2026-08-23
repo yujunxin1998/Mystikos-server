@@ -1,6 +1,7 @@
 package com.mystikos.identity.domain;
 
 import com.mystikos.common.web.exception.BusinessException;
+import com.mystikos.identity.domain.model.CompanionIdentityApplicationStatus;
 import com.mystikos.identity.domain.model.Role;
 
 public class IdentityException extends BusinessException {
@@ -84,6 +85,10 @@ public class IdentityException extends BusinessException {
                 "第三方登录授权失败（" + provider + "）：" + reason);
     }
 
+    public static IdentityException oauthTransactionInvalid() {
+        return new IdentityException(IdentityResponseCode.OAUTH_TRANSACTION_INVALID);
+    }
+
     public static IdentityException tagNotFound(Long tagId) {
         return new IdentityException(IdentityResponseCode.TAG_NOT_FOUND, "标签不存在：" + tagId);
     }
@@ -98,5 +103,44 @@ public class IdentityException extends BusinessException {
 
     public static IdentityException companionProfileNotFound(Long userId) {
         return new IdentityException(IdentityResponseCode.COMPANION_PROFILE_NOT_FOUND, "打手资料不存在：" + userId);
+    }
+
+    public static IdentityException companionApplicationNotFound(Long id) {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_NOT_FOUND, "陪玩申请不存在：" + id);
+    }
+
+    public static IdentityException companionApplicationContactRequired() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_CONTACT_REQUIRED);
+    }
+
+    public static IdentityException companionApplicationProfileIncomplete() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_PROFILE_INCOMPLETE);
+    }
+
+    public static IdentityException companionApplicationAlreadyPending() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_ALREADY_PENDING);
+    }
+
+    public static IdentityException companionApplicationAlreadyCompanion() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_ALREADY_COMPANION);
+    }
+
+    public static IdentityException companionApplicationInvalidStatusTransition(
+            CompanionIdentityApplicationStatus status) {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_INVALID_STATUS_TRANSITION,
+                "当前状态不允许该操作：" + status);
+    }
+
+    public static IdentityException companionApplicationReviewerRequired() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_REVIEWER_REQUIRED);
+    }
+
+    public static IdentityException companionApplicationResultRequired() {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_RESULT_REQUIRED);
+    }
+
+    public static IdentityException companionApplicationReviewerNotAssessor(Long reviewerId) {
+        return new IdentityException(IdentityResponseCode.COMPANION_APPLICATION_REVIEWER_NOT_ASSESSOR,
+                "考核人必须是考核官或管理员角色：" + reviewerId);
     }
 }

@@ -19,15 +19,17 @@ import org.springframework.context.annotation.Configuration;
 public class SpringDocGroupConfig {
 
     /**
-     * Identity & Access（身份与访问）：账号认证、老板资料（含标签目录），见 mystikos-identity。
-     * 运营态用户管理（UserController）挂在 {@code /api/v1/manage/**} 下，归入 {@link #manageApi()}，
-     * 不放在这里——避免同一个上下文的接口被拆到两个分组里，具体见该方法的注释。
+     * Identity & Access（身份与访问）：账号认证、老板资料（含标签目录）、陪玩身份申请（会员侧提交/自查），
+     * 见 mystikos-identity。运营态用户管理（UserController）、陪玩台账管理（CompanionController）、
+     * 陪玩身份申请审核（CompanionApplicationAdminController）都挂在 {@code /api/v1/manage/**} 下，
+     * 归入 {@link #manageApi()}，不放在这里——避免同一个上下文的接口被拆到两个分组里，具体见该方法的注释。
      */
     @Bean
     public GroupedOpenApi identityApi() {
         return GroupedOpenApi.builder()
                 .group("Identity & Access · 身份与访问")
-                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/roles/**", "/api/v1/tags/**")
+                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/roles/**", "/api/v1/tags/**",
+                        "/api/v1/companion-applications/**")
                 .build();
     }
 

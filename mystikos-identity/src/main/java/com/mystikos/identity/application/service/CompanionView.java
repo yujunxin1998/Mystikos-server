@@ -14,7 +14,7 @@ public record CompanionView(
         String avatarUrl,
         CompanionStatus status,
         String level,
-        List<String> skillTags,
+        List<TagView> tags,
         BigDecimal hourlyRate,
         String idCardNo,
         String bankAccountName,

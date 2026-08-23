@@ -34,10 +34,6 @@ public class CompanionProfilePO implements Serializable {
     @TableField("level")
     private String level;
 
-    @Schema(description = "技能标签，逗号分隔的自由文本")
-    @TableField("skill_tags")
-    private String skillTags;
-
     @Schema(description = "小时费率")
     @TableField("hourly_rate")
     private BigDecimal hourlyRate;
@@ -45,6 +41,10 @@ public class CompanionProfilePO implements Serializable {
     @Schema(description = "接单状态：AVAILABLE/BUSY/OFFLINE")
     @TableField("companion_status")
     private String companionStatus;
+
+    @Schema(description = "身份状态：ACTIVE/REVOKED")
+    @TableField("identity_status")
+    private String identityStatus;
 
     @Schema(description = "身份证号（明文存储）")
     @TableField("id_card_no")

@@ -15,10 +15,6 @@ public interface CompanionProfileRepository {
 
     Optional<CompanionProfile> findByUserId(Long userId);
 
-    boolean existsByUserId(Long userId);
-
-    void deleteByUserId(Long userId);
-
     /**
      * 后台管理列表：identity_user + identity_companion_profile 联表分页查询，按注册时间倒序。
      * status/keyword/createdFrom/createdTo 均为可选过滤条件；keyword 匹配昵称/手机号/身份证号。

@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 只收紧了目前已经有真实鉴权需求的路径（认证本身、老板资料、文件存储，以及所有归入
- * {@code /api/v1/manage/**} 前缀的后台管理接口——该前缀是后台管理接口的统一收口，
+ * 只收紧了目前已经有真实鉴权需求的路径（认证本身、老板资料、文件存储、陪玩身份申请，
+ * 以及所有归入 {@code /api/v1/manage/**} 前缀的后台管理接口——该前缀是后台管理接口的统一收口，
  * 新增管理接口只要挂在这个前缀下即自动纳入登录校验，方便后续做角色级权限收紧）。
  * 其他模块（Booking 等）的 C 端接口鉴权范围留给各自模块设计鉴权需求时收紧——
  * 这里默认放行，避免这次改动误伤还没设计鉴权的模块。
@@ -55,9 +55,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers("/doc.html", "/swagger-ui/**", "/swagger-resources/**",
                             "/v3/api-docs/**", "/webjars/**").permitAll();
+                    auth.requestMatchers(HttpMethod.GET,
+                            "/api/v1/auth/oauth/*/authorize",
+                            "/api/v1/auth/oauth/*/callback").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/auth/oauth/tickets").permitAll();
                     applyWhitelist(auth, whitelist);
                     auth.requestMatchers("/api/v1/auth/**").authenticated()
-                            .requestMatchers("/api/v1/manage/**", "/api/v1/profile/**", "/api/v1/files/**")
+                            .requestMatchers("/api/v1/manage/**", "/api/v1/profile/**", "/api/v1/files/**",
+                                    "/api/v1/companion-applications/**")
                                     .authenticated()
                             .anyRequest().permitAll();
                 })

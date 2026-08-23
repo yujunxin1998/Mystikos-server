@@ -7,7 +7,7 @@ import lombok.Data;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Set;
 
 @Data
 @Schema(description = "管理员新增打手请求")
@@ -30,8 +30,8 @@ public class AdminCreateCompanionRequest implements Serializable {
     @Schema(description = "级别")
     private String level;
 
-    @Schema(description = "技能标签")
-    private List<String> skillTags;
+    @Schema(description = "擅长游戏标签ID，引用标签目录（category=GAME_TYPE），见 GET /api/v1/tags")
+    private Set<Long> tagIds;
 
     @Schema(description = "小时费率")
     private BigDecimal hourlyRate;

@@ -15,7 +15,6 @@ public class CompanionRowPO {
     private String avatarUrl;
     private OffsetDateTime createdAt;
     private String level;
-    private String skillTags;
     private BigDecimal hourlyRate;
     private String companionStatus;
     private String idCardNo;

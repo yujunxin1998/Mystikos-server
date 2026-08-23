@@ -6,6 +6,7 @@ import com.mystikos.identity.adapter.web.dto.AuthTokenResponse;
 import com.mystikos.identity.adapter.web.dto.CurrentUserResponse;
 import com.mystikos.identity.adapter.web.dto.LoginRequest;
 import com.mystikos.identity.adapter.web.dto.OAuthLoginRequest;
+import com.mystikos.identity.adapter.web.dto.OAuthTicketRequest;
 import com.mystikos.identity.adapter.web.dto.RefreshTokenRequest;
 import com.mystikos.identity.adapter.web.dto.RegisterRequest;
 import com.mystikos.identity.adapter.web.dto.SendVerificationCodeRequest;
@@ -13,6 +14,7 @@ import com.mystikos.identity.application.command.LoginCommand;
 import com.mystikos.identity.application.command.RegisterCommand;
 import com.mystikos.identity.application.service.AuthApplicationService;
 import com.mystikos.identity.application.service.AuthResult;
+import com.mystikos.identity.application.service.OAuthFlowService;
 import com.mystikos.identity.application.service.UserApplicationService;
 import com.mystikos.identity.application.service.UserProfileView;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,7 +26,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.net.URI;
 
 /**
  * S1 账号与认证。手机号/邮箱二选一注册登录；第三方登录接口契约已占位，
@@ -37,11 +44,14 @@ public class AuthController {
 
     private final AuthApplicationService authApplicationService;
     private final UserApplicationService userApplicationService;
+    private final OAuthFlowService oauthFlowService;
 
     public AuthController(AuthApplicationService authApplicationService,
-                           UserApplicationService userApplicationService) {
+                           UserApplicationService userApplicationService,
+                           OAuthFlowService oauthFlowService) {
         this.authApplicationService = authApplicationService;
         this.userApplicationService = userApplicationService;
+        this.oauthFlowService = oauthFlowService;
     }
 
     @PostMapping("/verification-codes")
@@ -75,6 +85,29 @@ public class AuthController {
     public APIResponse<AuthTokenResponse> loginWithOAuth(@PathVariable String provider,
                                                           @Valid @RequestBody OAuthLoginRequest request) {
         AuthResult result = authApplicationService.loginWithOAuth(provider, request.getCode());
+        return APIResponse.ok(AuthTokenResponse.from(result));
+    }
+
+    @GetMapping("/oauth/{provider}/authorize")
+    @Operation(summary = "发起服务端 OAuth 登录")
+    public ResponseEntity<Void> authorizeOAuth(@PathVariable String provider) {
+        URI authorizationUri = oauthFlowService.beginAuthorization(provider);
+        return ResponseEntity.status(HttpStatus.FOUND).location(authorizationUri).build();
+    }
+
+    @GetMapping("/oauth/{provider}/callback")
+    @Operation(summary = "第三方 OAuth 回调")
+    public ResponseEntity<Void> oauthCallback(@PathVariable String provider,
+                                               @RequestParam String code,
+                                               @RequestParam String state) {
+        URI frontendUri = oauthFlowService.completeAuthorization(provider, code, state);
+        return ResponseEntity.status(HttpStatus.FOUND).location(frontendUri).build();
+    }
+
+    @PostMapping("/oauth/tickets")
+    @Operation(summary = "兑换一次性 OAuth 登录票据")
+    public APIResponse<AuthTokenResponse> redeemOAuthTicket(@Valid @RequestBody OAuthTicketRequest request) {
+        AuthResult result = oauthFlowService.redeemTicket(request.getTicket());
         return APIResponse.ok(AuthTokenResponse.from(result));
     }
 

@@ -8,11 +8,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
+import java.net.InetSocketAddress;
+import java.net.ProxySelector;
+import java.net.http.HttpClient;
 
 /**
  * Discord OAuth2 授权码换用户信息。标准的 authorization_code 流程：
@@ -32,18 +39,22 @@ public class DiscordOAuthClient implements OAuthProviderClient {
 
     private static final String TOKEN_URL = "https://discord.com/api/oauth2/token";
     private static final String USER_INFO_URL = "https://discord.com/api/users/@me";
+    private static final String AUTHORIZE_URL = "https://discord.com/oauth2/authorize";
 
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
     private final String clientId;
     private final String clientSecret;
     private final String redirectUri;
 
     public DiscordOAuthClient(@Value("${mystikos.oauth.discord.client-id}") String clientId,
                                @Value("${mystikos.oauth.discord.client-secret}") String clientSecret,
-                               @Value("${mystikos.oauth.discord.redirect-uri}") String redirectUri) {
+                               @Value("${mystikos.oauth.discord.redirect-uri}") String redirectUri,
+                               @Value("${mystikos.oauth.proxy-host:}") String proxyHost,
+                               @Value("${mystikos.oauth.proxy-port:0}") int proxyPort) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.redirectUri = redirectUri;
+        this.restClient = createRestClient(proxyHost, proxyPort);
     }
 
     @Override
@@ -53,18 +64,41 @@ public class DiscordOAuthClient implements OAuthProviderClient {
 
     @Override
     public OAuthUserInfo exchangeCodeForUser(String authorizationCode) {
-        String accessToken = exchangeCodeForAccessToken(authorizationCode);
+        return exchangeCodeForUser(authorizationCode, null);
+    }
+
+    @Override
+    public URI buildAuthorizationUri(String state, String codeChallenge) {
+        return UriComponentsBuilder.fromUriString(AUTHORIZE_URL)
+                .queryParam("client_id", clientId)
+                .queryParam("redirect_uri", redirectUri)
+                .queryParam("response_type", "code")
+                .queryParam("scope", "identify email")
+                .queryParam("state", state)
+                .queryParam("code_challenge", codeChallenge)
+                .queryParam("code_challenge_method", "S256")
+                .build()
+                .encode()
+                .toUri();
+    }
+
+    @Override
+    public OAuthUserInfo exchangeCodeForUser(String authorizationCode, String codeVerifier) {
+        String accessToken = exchangeCodeForAccessToken(authorizationCode, codeVerifier);
         DiscordUser discordUser = fetchDiscordUser(accessToken);
         return new OAuthUserInfo(discordUser.id(), discordUser.username(), discordUser.email());
     }
 
-    private String exchangeCodeForAccessToken(String authorizationCode) {
+    private String exchangeCodeForAccessToken(String authorizationCode, String codeVerifier) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("client_id", clientId);
         form.add("client_secret", clientSecret);
         form.add("grant_type", "authorization_code");
         form.add("code", authorizationCode);
         form.add("redirect_uri", redirectUri);
+        if (codeVerifier != null && !codeVerifier.isBlank()) {
+            form.add("code_verifier", codeVerifier);
+        }
 
         TokenResponse token;
         try {
@@ -98,6 +132,18 @@ public class DiscordOAuthClient implements OAuthProviderClient {
             throw IdentityException.oauthExchangeFailed("discord", "empty user response");
         }
         return discordUser;
+    }
+
+    private RestClient createRestClient(String proxyHost, int proxyPort) {
+        if (proxyHost == null || proxyHost.isBlank() || proxyPort <= 0) {
+            return RestClient.create();
+        }
+        HttpClient httpClient = HttpClient.newBuilder()
+                .proxy(ProxySelector.of(new InetSocketAddress(proxyHost, proxyPort)))
+                .build();
+        return RestClient.builder()
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .build();
     }
 
     private record TokenResponse(@JsonProperty("access_token") String accessToken) {

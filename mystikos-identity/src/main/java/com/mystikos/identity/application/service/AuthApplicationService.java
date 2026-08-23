@@ -158,11 +158,16 @@ public class AuthApplicationService {
      */
     @Transactional
     public AuthResult loginWithOAuth(String provider, String authorizationCode) {
+        return loginWithOAuth(provider, authorizationCode, null);
+    }
+
+    @Transactional
+    public AuthResult loginWithOAuth(String provider, String authorizationCode, String codeVerifier) {
         OAuthProviderClient client = oauthProviderClients.get(provider.toLowerCase());
         if (client == null) {
             throw IdentityException.oauthProviderNotConfigured(provider);
         }
-        OAuthUserInfo info = client.exchangeCodeForUser(authorizationCode);
+        OAuthUserInfo info = client.exchangeCodeForUser(authorizationCode, codeVerifier);
         OAuthBinding binding = new OAuthBinding(client.providerCode(), info.providerUserId(), OffsetDateTime.now());
 
         Optional<User> existing = userRepository.findByOAuthBinding(client.providerCode(), info.providerUserId());

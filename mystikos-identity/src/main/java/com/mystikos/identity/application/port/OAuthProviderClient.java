@@ -1,5 +1,7 @@
 package com.mystikos.identity.application.port;
 
+import java.net.URI;
+
 /**
  * 出站端口：拿第三方授权码换用户信息。每个 Provider（Discord/微信……）一个实现，
  * {@link #providerCode()} 对应 {@code /api/v1/auth/oauth/{provider}/login} 路径里的 provider 段
@@ -11,4 +13,12 @@ public interface OAuthProviderClient {
     String providerCode();
 
     OAuthUserInfo exchangeCodeForUser(String authorizationCode);
+
+    default URI buildAuthorizationUri(String state, String codeChallenge) {
+        throw new UnsupportedOperationException("OAuth authorization redirect is not supported by " + providerCode());
+    }
+
+    default OAuthUserInfo exchangeCodeForUser(String authorizationCode, String codeVerifier) {
+        return exchangeCodeForUser(authorizationCode);
+    }
 }

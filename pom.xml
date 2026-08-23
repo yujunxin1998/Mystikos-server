@@ -53,6 +53,7 @@
         <minio.version>9.0.3</minio.version>
         <aliyun-sms.version>4.6.0</aliyun-sms.version>
         <pagehelper.version>1.4.7</pagehelper.version>
+        <stripe.version>27.1.2</stripe.version>
     </properties>
 
     <dependencyManagement>
@@ -119,6 +120,11 @@
                 <groupId>com.github.pagehelper</groupId>
                 <artifactId>pagehelper-spring-boot-starter</artifactId>
                 <version>${pagehelper.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.stripe</groupId>
+                <artifactId>stripe-java</artifactId>
+                <version>${stripe.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

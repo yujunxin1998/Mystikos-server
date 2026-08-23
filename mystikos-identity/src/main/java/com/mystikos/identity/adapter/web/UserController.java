@@ -1,7 +1,9 @@
 package com.mystikos.identity.adapter.web;
 
 import com.mystikos.common.result.APIResponse;
+import com.mystikos.common.result.PageResult;
 import com.mystikos.identity.application.service.UserApplicationService;
+import com.mystikos.identity.application.service.UserProfileView;
 import com.mystikos.identity.domain.model.Role;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Set;
@@ -63,5 +66,14 @@ public class UserController {
     @Operation(summary = "查询用户已解析的权限编码集合", description = "拥有 ADMIN 角色时返回通配符 \"*\"")
     public APIResponse<Set<String>> permissions(@Parameter(description = "用户ID") @PathVariable Long userId) {
         return APIResponse.ok(userApplicationService.resolvePermissions(userId));
+    }
+
+    @GetMapping
+    @Operation(summary = "分页查询用户列表", description = "按创建时间倒序，运营态操作")
+    @SecurityRequirement(name = "bearerAuth")
+    public APIResponse<PageResult<UserProfileView>> list(
+            @Parameter(description = "页码，从1开始") @RequestParam(defaultValue = "1") int pageNum,
+            @Parameter(description = "每页条数") @RequestParam(defaultValue = "20") int pageSize) {
+        return APIResponse.ok(userApplicationService.listUsers(pageNum, pageSize));
     }
 }

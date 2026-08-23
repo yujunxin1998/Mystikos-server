@@ -1,6 +1,7 @@
 package com.mystikos.identity.application.service;
 
 import com.mystikos.common.region.RegionQueryService;
+import com.mystikos.common.result.PageResult;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.Gender;
 import com.mystikos.identity.domain.model.Role;
@@ -70,7 +71,17 @@ public class UserApplicationService {
     }
 
     public UserProfileView getProfile(Long userId) {
-        User user = getUser(userId);
+        return toProfileView(getUser(userId));
+    }
+
+    /** 运营态用户列表，按创建时间倒序分页，见 UserController。 */
+    public PageResult<UserProfileView> listUsers(int pageNum, int pageSize) {
+        PageResult<User> page = userRepository.findPage(pageNum, pageSize);
+        List<UserProfileView> views = page.records().stream().map(this::toProfileView).toList();
+        return PageResult.of(views, page.total(), page.pageNum(), page.pageSize());
+    }
+
+    private UserProfileView toProfileView(User user) {
         List<TagView> tags = tagDefinitionRepository.findByIds(user.getTagIds()).stream()
                 .map(TagApplicationService::toView)
                 .toList();

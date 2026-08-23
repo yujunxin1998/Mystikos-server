@@ -1,6 +1,9 @@
 package com.mystikos.identity.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import com.mystikos.common.result.PageResult;
 import com.mystikos.identity.domain.model.Gender;
 import com.mystikos.identity.domain.model.OAuthBinding;
 import com.mystikos.identity.domain.model.Role;
@@ -103,6 +106,16 @@ public class UserRepositoryImpl implements UserRepository {
     @Override
     public boolean existsByEmail(String email) {
         return userMapper.exists(new LambdaQueryWrapper<UserPO>().eq(UserPO::getEmail, email));
+    }
+
+    @Override
+    public PageResult<User> findPage(int pageNum, int pageSize) {
+        PageHelper.startPage(pageNum, pageSize);
+        List<UserPO> pos = userMapper.selectList(
+                new LambdaQueryWrapper<UserPO>().orderByDesc(UserPO::getCreatedAt));
+        PageInfo<UserPO> pageInfo = new PageInfo<>(pos);
+        List<User> users = pos.stream().map(this::toDomainWithAssociations).toList();
+        return PageResult.of(users, pageInfo.getTotal(), pageNum, pageSize);
     }
 
     private User toDomainWithAssociations(UserPO po) {

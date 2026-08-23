@@ -49,6 +49,12 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
 
+pagehelper:
+  # 显式指定方言，不依赖 PageHelper 按驱动自动识别——用户列表分页（UserController）用它
+  helper-dialect: postgresql
+  reasonable: true
+  support-methods-arguments: true
+
 logging:
   level:
     com.mystikos: debug

@@ -52,6 +52,7 @@
         <jwt.version>0.11.5</jwt.version>
         <minio.version>9.0.3</minio.version>
         <aliyun-sms.version>4.6.0</aliyun-sms.version>
+        <pagehelper.version>1.4.7</pagehelper.version>
     </properties>
 
     <dependencyManagement>
@@ -113,6 +114,11 @@
                 <groupId>com.aliyun</groupId>
                 <artifactId>dysmsapi20170525</artifactId>
                 <version>${aliyun-sms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.pagehelper</groupId>
+                <artifactId>pagehelper-spring-boot-starter</artifactId>
+                <version>${pagehelper.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

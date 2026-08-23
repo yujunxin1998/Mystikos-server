@@ -31,14 +31,14 @@
             <version>${project.version}</version>
         </dependency>
         <!--
-            只为了拿 GiftSentEvent 事件契约类做 @EventListener。这是临时顶替方案——
-            按 domain-model.md 的事件图，Membership 真正应该订阅的是 mystikos-payment
-            的 PaymentCaptured，但 Payment 上下文还没建（S6，这次不在范围内）。
-            Payment 落地后要把这个依赖和对应的监听器换掉，见 infrastructure/acl 包。
+            拿 PaymentCapturedEvent 事件契约类做 @TransactionalEventListener——
+            按 domain-model.md 的事件图，这是 Membership 真正应该订阅的事件源，
+            覆盖 Booking/Commerce/Gifting/钱包充值四个来源，不再只有礼物打赏那一路
+            （之前临时订阅 mystikos-gifting 的 GiftSentEvent 顶替，见 infrastructure/acl 包历史记录）。
         -->
         <dependency>
             <groupId>com.mystikos</groupId>
-            <artifactId>mystikos-gifting</artifactId>
+            <artifactId>mystikos-payment</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -13,6 +13,8 @@ public class CompanionShowcaseRevisionRowPO {
     private Long id;
     private Long userId;
     private String bio;
+    private String tagline;
+    private String availability;
     private String status;
     private Long reviewerId;
     private String reviewComment;

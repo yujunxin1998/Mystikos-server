@@ -19,17 +19,32 @@ import org.springframework.context.annotation.Configuration;
 public class SpringDocGroupConfig {
 
     /**
-     * Identity & Access（身份与访问）：账号认证、老板资料（含标签目录）、陪玩身份申请（会员侧提交/自查），
-     * 见 mystikos-identity。运营态用户管理（UserController）、陪玩台账管理（CompanionController）、
-     * 陪玩身份申请审核（CompanionApplicationAdminController）都挂在 {@code /api/v1/manage/**} 下，
-     * 归入 {@link #manageApi()}，不放在这里——避免同一个上下文的接口被拆到两个分组里，具体见该方法的注释。
+     * Identity & Access（身份与访问）：账号认证、老板资料（含标签目录），见 mystikos-identity。
+     * 陪玩身份申请/名片相关会员侧+老板侧接口单独拆到 {@link #companionApi()}，见该方法注释；
+     * 运营态用户管理（UserController）都挂在 {@code /api/v1/manage/**} 下，归入 {@link #manageApi()}，
+     * 不放在这里——避免同一个上下文的接口被拆到两个分组里，具体见该方法的注释。
      */
     @Bean
     public GroupedOpenApi identityApi() {
         return GroupedOpenApi.builder()
                 .group("Identity & Access · 身份与访问")
-                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/roles/**", "/api/v1/tags/**",
-                        "/api/v1/companion-applications/**")
+                .pathsToMatch("/api/v1/auth/**", "/api/v1/profile/**", "/api/v1/roles/**", "/api/v1/tags/**")
+                .build();
+    }
+
+    /**
+     * Companion（陪玩）：陪玩身份申请（会员侧提交/自查）、陪玩名片（会员侧编辑草稿/提交审核，
+     * 老板侧浏览目录/查看已发布内容），见 mystikos-identity。单独拆出来是因为这三块虽然物理上
+     * 和 Identity & Access 同一个模块（mystikos-identity），但业务上是陪玩这条线自己的闭环，
+     * 跟账号认证/老板资料没什么关系，混在一起下拉列表会很长。审核态接口（CompanionApplicationAdminController/
+     * CompanionShowcaseAdminController）挂在 {@code /api/v1/manage/**} 下，归入 {@link #manageApi()}，不放在这里。
+     */
+    @Bean
+    public GroupedOpenApi companionApi() {
+        return GroupedOpenApi.builder()
+                .group("Companion · 陪玩")
+                .pathsToMatch("/api/v1/companion-applications/**", "/api/v1/companion-showcase/**",
+                        "/api/v1/companions/**")
                 .build();
     }
 

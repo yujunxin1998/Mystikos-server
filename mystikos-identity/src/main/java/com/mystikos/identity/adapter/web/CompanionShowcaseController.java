@@ -3,6 +3,7 @@ package com.mystikos.identity.adapter.web;
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.security.CurrentUserContext;
 import com.mystikos.identity.adapter.web.dto.SaveCompanionShowcaseDraftRequest;
+import com.mystikos.identity.adapter.web.dto.ReorderCompanionShowcaseMediaRequest;
 import com.mystikos.identity.application.service.CompanionShowcaseApplicationService;
 import com.mystikos.identity.application.service.CompanionShowcaseView;
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,8 +45,9 @@ public class CompanionShowcaseController {
             description = "照片/视频/语音取 /api/v1/files/upload 返回的 objectKey；待审核状态下不能编辑，需等审核结果")
     public APIResponse<Void> saveDraft(@Valid @RequestBody SaveCompanionShowcaseDraftRequest request) {
         Long userId = Long.valueOf(CurrentUserContext.get().userId());
-        companionShowcaseApplicationService.saveDraft(userId, request.getBio(), request.getTagIds(),
-                request.getPhotoObjectKeys(), request.getVideoObjectKeys(), request.getAudioObjectKeys());
+        companionShowcaseApplicationService.saveDraft(userId, request.getBio(), request.getTagline(),
+                request.getAvailability(), request.getTagIds(), request.getCoverObjectKey(), request.getPhotoObjectKeys(),
+                request.getVideoObjectKeys(), request.getAudioObjectKeys());
         return APIResponse.ok();
     }
 
@@ -54,6 +56,15 @@ public class CompanionShowcaseController {
     public APIResponse<Void> submit() {
         Long userId = Long.valueOf(CurrentUserContext.get().userId());
         companionShowcaseApplicationService.submit(userId);
+        return APIResponse.ok();
+    }
+
+    @PutMapping("/me/media-order")
+    @Operation(summary = "调整已发布名片素材顺序", description = "只能重排已有照片/视频/语音，不改变素材内容，无需重新审核")
+    public APIResponse<Void> reorderMedia(@Valid @RequestBody ReorderCompanionShowcaseMediaRequest request) {
+        Long userId = Long.valueOf(CurrentUserContext.get().userId());
+        companionShowcaseApplicationService.reorderPublishedMedia(userId, request.getPhotoObjectKeys(),
+                request.getVideoObjectKeys(), request.getAudioObjectKeys());
         return APIResponse.ok();
     }
 }

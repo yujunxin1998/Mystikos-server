@@ -5,6 +5,7 @@ import com.mystikos.common.storage.ObjectStorageService;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.CompanionShowcase;
 import com.mystikos.identity.domain.model.CompanionShowcaseRevision;
+import com.mystikos.identity.domain.model.CompanionShowcasePublicSummary;
 import com.mystikos.identity.domain.model.CompanionShowcaseRevisionStatus;
 import com.mystikos.identity.domain.model.Role;
 import com.mystikos.identity.domain.model.TagDefinition;
@@ -32,7 +33,7 @@ import java.util.Set;
 public class CompanionShowcaseApplicationService {
 
     private static final int MAX_PHOTOS = 9;
-    private static final int MAX_VIDEOS = 3;
+    private static final int MAX_VIDEOS = 5;
     private static final int MAX_AUDIOS = 3;
     private static final Duration MEDIA_URL_TTL = Duration.ofMinutes(15);
 
@@ -59,8 +60,10 @@ public class CompanionShowcaseApplicationService {
      * 就新开一条；待审核（PENDING_REVIEW）不允许编辑，要等审核结果出来。
      */
     @Transactional
-    public void saveDraft(Long userId, String bio, Set<Long> tagIds, List<String> photoObjectKeys,
-                           List<String> videoObjectKeys, List<String> audioObjectKeys) {
+    public void saveDraft(Long userId, String bio, String tagline, String availability, Set<Long> tagIds,
+                           String coverObjectKey,
+                           List<String> photoObjectKeys, List<String> videoObjectKeys,
+                           List<String> audioObjectKeys) {
         requireCompanion(userId);
         Set<Long> requestedTags = tagIds == null ? Set.of() : tagIds;
         validateTags(requestedTags);
@@ -78,7 +81,8 @@ public class CompanionShowcaseApplicationService {
         } else {
             revision = latest;
         }
-        revision.updateContent(bio, requestedTags, photoObjectKeys, videoObjectKeys, audioObjectKeys);
+        revision.updateContent(bio, tagline, availability, requestedTags, coverObjectKey, photoObjectKeys, videoObjectKeys,
+                audioObjectKeys);
         revisionRepository.save(revision);
     }
 
@@ -142,9 +146,54 @@ public class CompanionShowcaseApplicationService {
                 .toList();
         String avatarUrl = user.getAvatarObjectKey() == null ? null
                 : objectStorageService.presignedDownloadUrl(user.getAvatarObjectKey(), MEDIA_URL_TTL);
-        return new CompanionShowcasePublicView(userId, user.getNickname(), avatarUrl, revision.getBio(), tags,
+        String coverUrl = revision.getCoverObjectKey() == null ? null : objectStorageService.presignedDownloadUrl(revision.getCoverObjectKey(), MEDIA_URL_TTL);
+        return new CompanionShowcasePublicView(userId, user.getNickname(), avatarUrl, revision.getBio(),
+                revision.getTagline(), revision.getAvailability(), coverUrl, tags,
                 toUrls(revision.getPhotoObjectKeys()), toUrls(revision.getVideoObjectKeys()),
                 toUrls(revision.getAudioObjectKeys()), showcase.getPublishedAt());
+    }
+
+    @Transactional
+    public void reorderPublishedMedia(Long userId, List<String> photoObjectKeys, List<String> videoObjectKeys,
+                                      List<String> audioObjectKeys) {
+        requireCompanion(userId);
+        CompanionShowcase showcase = showcaseRepository.findByUserId(userId)
+                .filter(CompanionShowcase::isPublished)
+                .orElseThrow(() -> IdentityException.companionShowcaseNotPublished(userId));
+        CompanionShowcaseRevision published = revisionRepository.findById(showcase.getPublishedRevisionId())
+                .orElseThrow(() -> IdentityException.companionShowcaseRevisionNotFound(showcase.getPublishedRevisionId()));
+        if (!sameItems(published.getPhotoObjectKeys(), photoObjectKeys)
+                || !sameItems(published.getVideoObjectKeys(), videoObjectKeys)
+                || !sameItems(published.getAudioObjectKeys(), audioObjectKeys)) {
+            throw IdentityException.companionShowcaseMediaOrderInvalid();
+        }
+        revisionRepository.reorderMedia(published.getId(), photoObjectKeys, videoObjectKeys, audioObjectKeys);
+    }
+
+    private boolean sameItems(List<String> current, List<String> requested) {
+        return requested != null && current.size() == requested.size()
+                && new HashSet<>(current).equals(new HashSet<>(requested));
+    }
+
+    /** 老板浏览目录：分页列出已发布名片的卡片，支持按游戏标签/关键字过滤，见 {@link CompanionShowcasePublicCardView}。 */
+    public PageResult<CompanionShowcasePublicCardView> browsePublished(int pageNum, int pageSize, Long tagId,
+                                                                        String keyword) {
+        PageResult<CompanionShowcasePublicSummary> page = showcaseRepository.searchPublished(pageNum, pageSize,
+                tagId, keyword);
+        List<CompanionShowcasePublicCardView> cards = page.records().stream().map(this::toCardView).toList();
+        return PageResult.of(cards, page.total(), page.pageNum(), page.pageSize());
+    }
+
+    private CompanionShowcasePublicCardView toCardView(CompanionShowcasePublicSummary summary) {
+        List<TagView> tags = tagDefinitionRepository.findByIds(summary.tagIds()).stream()
+                .map(TagApplicationService::toView)
+                .toList();
+        String avatarUrl = summary.avatarObjectKey() == null ? null
+                : objectStorageService.presignedDownloadUrl(summary.avatarObjectKey(), MEDIA_URL_TTL);
+        String coverPhotoUrl = summary.coverPhotoObjectKey() == null ? null
+                : objectStorageService.presignedDownloadUrl(summary.coverPhotoObjectKey(), MEDIA_URL_TTL);
+        return new CompanionShowcasePublicCardView(summary.userId(), summary.nickname(), avatarUrl, summary.bio(),
+                summary.tagline(), summary.availability(), tags, coverPhotoUrl, summary.publishedAt());
     }
 
     private User requireCompanion(Long userId) {
@@ -197,9 +246,13 @@ public class CompanionShowcaseApplicationService {
         boolean published = showcase != null && showcase.isPublished();
         OffsetDateTime publishedAt = showcase == null ? null : showcase.getPublishedAt();
         return new CompanionShowcaseView(revision.getId(), revision.getUserId(), applicant.getNickname(),
-                applicant.getPhone(), applicant.getEmail(), revision.getStatus(), revision.getBio(), tags,
+                applicant.getPhone(), applicant.getEmail(), revision.getStatus(), revision.getBio(),
+                revision.getTagline(), revision.getAvailability(),
+                revision.getCoverObjectKey() == null ? null : objectStorageService.presignedDownloadUrl(revision.getCoverObjectKey(), MEDIA_URL_TTL),
+                revision.getCoverObjectKey(), tags,
                 toUrls(revision.getPhotoObjectKeys()), toUrls(revision.getVideoObjectKeys()),
-                toUrls(revision.getAudioObjectKeys()), revision.getReviewerId(), reviewerNickname,
+                toUrls(revision.getAudioObjectKeys()), revision.getPhotoObjectKeys(), revision.getVideoObjectKeys(),
+                revision.getAudioObjectKeys(), revision.getReviewerId(), reviewerNickname,
                 revision.getReviewComment(), revision.getReviewedAt(), revision.getCreatedAt(),
                 revision.getUpdatedAt(), published, publishedAt);
     }

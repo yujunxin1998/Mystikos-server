@@ -5,19 +5,19 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import java.time.OffsetDateTime;
 import java.util.List;
 
-/** 老板端浏览陪玩名片用，只有已发布内容，没有任何审核相关字段。 */
-public record CompanionShowcasePublicView(
+/**
+ * 老板浏览陪玩名片目录（列表）用，比详情页 {@link CompanionShowcasePublicView} 轻——
+ * 只带一张封面图（首张照片），不带完整媒体列表，列表页没必要为每张卡片都拉全部照片/视频/语音。
+ */
+public record CompanionShowcasePublicCardView(
         @JsonSerialize(using = ToStringSerializer.class) Long userId,
         String nickname,
         String avatarUrl,
         String bio,
         String tagline,
         String availability,
-        String coverUrl,
         List<TagView> tags,
-        List<String> photoUrls,
-        List<String> videoUrls,
-        List<String> audioUrls,
+        String coverPhotoUrl,
         OffsetDateTime publishedAt
 ) {
 }

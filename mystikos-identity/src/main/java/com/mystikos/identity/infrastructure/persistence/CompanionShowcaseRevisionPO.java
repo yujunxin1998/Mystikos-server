@@ -35,6 +35,14 @@ public class CompanionShowcaseRevisionPO implements Serializable {
     @TableField("bio")
     private String bio;
 
+    @Schema(description = "一句话标签")
+    @TableField("tagline")
+    private String tagline;
+
+    @Schema(description = "可约状态文案，纯展示")
+    @TableField("availability")
+    private String availability;
+
     @Schema(description = "状态：DRAFT/PENDING_REVIEW/APPROVED/REJECTED")
     @TableField("status")
     private String status;

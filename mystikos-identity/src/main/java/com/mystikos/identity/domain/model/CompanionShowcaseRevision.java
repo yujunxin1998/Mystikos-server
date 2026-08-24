@@ -20,7 +20,10 @@ public class CompanionShowcaseRevision {
     private Long id;
     private final Long userId;
     private String bio;
+    private String tagline;
+    private String availability;
     private Set<Long> tagIds;
+    private String coverObjectKey;
     private List<String> photoObjectKeys;
     private List<String> videoObjectKeys;
     private List<String> audioObjectKeys;
@@ -31,15 +34,18 @@ public class CompanionShowcaseRevision {
     private final OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
 
-    private CompanionShowcaseRevision(Long id, Long userId, String bio, Set<Long> tagIds,
-                                       List<String> photoObjectKeys, List<String> videoObjectKeys,
+    private CompanionShowcaseRevision(Long id, Long userId, String bio, String tagline, String availability,
+                                       Set<Long> tagIds, String coverObjectKey, List<String> photoObjectKeys, List<String> videoObjectKeys,
                                        List<String> audioObjectKeys, CompanionShowcaseRevisionStatus status,
                                        Long reviewerId, String reviewComment, OffsetDateTime reviewedAt,
                                        OffsetDateTime createdAt, OffsetDateTime updatedAt) {
         this.id = id;
         this.userId = userId;
         this.bio = bio;
+        this.tagline = tagline;
+        this.availability = availability;
         this.tagIds = tagIds == null ? new HashSet<>() : new HashSet<>(tagIds);
+        this.coverObjectKey = coverObjectKey;
         this.photoObjectKeys = photoObjectKeys == null ? List.of() : List.copyOf(photoObjectKeys);
         this.videoObjectKeys = videoObjectKeys == null ? List.of() : List.copyOf(videoObjectKeys);
         this.audioObjectKeys = audioObjectKeys == null ? List.of() : List.copyOf(audioObjectKeys);
@@ -54,29 +60,37 @@ public class CompanionShowcaseRevision {
     /** 新开一条空草稿：陪玩第一次编辑，或者上一条记录已经是终态（APPROVED/REJECTED）时用。 */
     public static CompanionShowcaseRevision draft(Long userId) {
         OffsetDateTime now = OffsetDateTime.now();
-        return new CompanionShowcaseRevision(null, userId, null, Set.of(), List.of(), List.of(), List.of(),
-                CompanionShowcaseRevisionStatus.DRAFT, null, null, null, now, now);
+        return new CompanionShowcaseRevision(null, userId, null, null, null, Set.of(), null, List.of(), List.of(),
+                List.of(), CompanionShowcaseRevisionStatus.DRAFT, null, null, null, now, now);
     }
 
     /** 从持久化数据重建，仅供仓储实现调用。 */
-    public static CompanionShowcaseRevision restore(Long id, Long userId, String bio, Set<Long> tagIds,
+    public static CompanionShowcaseRevision restore(Long id, Long userId, String bio, String tagline,
+                                                      String availability, Set<Long> tagIds,
+                                                      String coverObjectKey,
                                                       List<String> photoObjectKeys, List<String> videoObjectKeys,
                                                       List<String> audioObjectKeys,
                                                       CompanionShowcaseRevisionStatus status, Long reviewerId,
                                                       String reviewComment, OffsetDateTime reviewedAt,
                                                       OffsetDateTime createdAt, OffsetDateTime updatedAt) {
-        return new CompanionShowcaseRevision(id, userId, bio, tagIds, photoObjectKeys, videoObjectKeys,
-                audioObjectKeys, status, reviewerId, reviewComment, reviewedAt, createdAt, updatedAt);
+        return new CompanionShowcaseRevision(id, userId, bio, tagline, availability, tagIds, coverObjectKey, photoObjectKeys,
+                videoObjectKeys, audioObjectKeys, status, reviewerId, reviewComment, reviewedAt, createdAt,
+                updatedAt);
     }
 
     /** 更新草稿内容：只有编辑中（DRAFT）能改，待审核/终态都要先走完流程或重新开草稿。 */
-    public void updateContent(String bio, Set<Long> tagIds, List<String> photoObjectKeys,
-                               List<String> videoObjectKeys, List<String> audioObjectKeys) {
+    public void updateContent(String bio, String tagline, String availability, Set<Long> tagIds,
+                               String coverObjectKey,
+                               List<String> photoObjectKeys, List<String> videoObjectKeys,
+                               List<String> audioObjectKeys) {
         if (status != CompanionShowcaseRevisionStatus.DRAFT) {
             throw IdentityException.companionShowcaseInvalidStatusTransition(status);
         }
         this.bio = bio;
+        this.tagline = tagline;
+        this.availability = availability;
         this.tagIds = tagIds == null ? new HashSet<>() : new HashSet<>(tagIds);
+        this.coverObjectKey = coverObjectKey;
         this.photoObjectKeys = photoObjectKeys == null ? List.of() : List.copyOf(photoObjectKeys);
         this.videoObjectKeys = videoObjectKeys == null ? List.of() : List.copyOf(videoObjectKeys);
         this.audioObjectKeys = audioObjectKeys == null ? List.of() : List.copyOf(audioObjectKeys);
@@ -139,12 +153,24 @@ public class CompanionShowcaseRevision {
         return bio;
     }
 
+    public String getTagline() {
+        return tagline;
+    }
+
+    public String getAvailability() {
+        return availability;
+    }
+
     public Set<Long> getTagIds() {
         return Collections.unmodifiableSet(tagIds);
     }
 
     public List<String> getPhotoObjectKeys() {
         return photoObjectKeys;
+    }
+
+    public String getCoverObjectKey() {
+        return coverObjectKey;
     }
 
     public List<String> getVideoObjectKeys() {

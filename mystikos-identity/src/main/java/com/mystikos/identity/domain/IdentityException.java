@@ -173,6 +173,11 @@ public class IdentityException extends BusinessException {
                 mediaTypeLabel + "最多上传 " + maxCount + " 个");
     }
 
+    public static IdentityException companionShowcaseMediaOrderInvalid() {
+        return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_INCOMPLETE,
+                "排序只能调整已发布素材的顺序，不能增删或替换素材");
+    }
+
     public static IdentityException companionShowcaseReviewReasonRequired() {
         return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_REVIEW_REASON_REQUIRED);
     }

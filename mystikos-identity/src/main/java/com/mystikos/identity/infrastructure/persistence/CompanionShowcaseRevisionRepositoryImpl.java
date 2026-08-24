@@ -53,6 +53,8 @@ public class CompanionShowcaseRevisionRepositoryImpl implements CompanionShowcas
 
         mediaMapper.delete(new LambdaQueryWrapper<CompanionShowcaseRevisionMediaPO>()
                 .eq(CompanionShowcaseRevisionMediaPO::getRevisionId, po.getId()));
+        insertMedia(po.getId(), CompanionShowcaseMediaType.COVER,
+                revision.getCoverObjectKey() == null ? List.of() : List.of(revision.getCoverObjectKey()));
         insertMedia(po.getId(), CompanionShowcaseMediaType.PHOTO, revision.getPhotoObjectKeys());
         insertMedia(po.getId(), CompanionShowcaseMediaType.VIDEO, revision.getVideoObjectKeys());
         insertMedia(po.getId(), CompanionShowcaseMediaType.AUDIO, revision.getAudioObjectKeys());
@@ -74,6 +76,22 @@ public class CompanionShowcaseRevisionRepositoryImpl implements CompanionShowcas
                         .orderByDesc(CompanionShowcaseRevisionPO::getCreatedAt)
                         .last("LIMIT 1"));
         return pos.isEmpty() ? Optional.empty() : Optional.of(toDomain(pos.get(0)));
+    }
+
+    @Override
+    @Transactional
+    public void reorderMedia(Long revisionId, List<String> photoObjectKeys, List<String> videoObjectKeys,
+                             List<String> audioObjectKeys) {
+        replaceMedia(revisionId, CompanionShowcaseMediaType.PHOTO, photoObjectKeys);
+        replaceMedia(revisionId, CompanionShowcaseMediaType.VIDEO, videoObjectKeys);
+        replaceMedia(revisionId, CompanionShowcaseMediaType.AUDIO, audioObjectKeys);
+    }
+
+    private void replaceMedia(Long revisionId, CompanionShowcaseMediaType type, List<String> objectKeys) {
+        mediaMapper.delete(new LambdaQueryWrapper<CompanionShowcaseRevisionMediaPO>()
+                .eq(CompanionShowcaseRevisionMediaPO::getRevisionId, revisionId)
+                .eq(CompanionShowcaseRevisionMediaPO::getMediaType, type.name()));
+        insertMedia(revisionId, type, objectKeys);
     }
 
     @Override
@@ -116,6 +134,8 @@ public class CompanionShowcaseRevisionRepositoryImpl implements CompanionShowcas
         po.setId(revision.getId());
         po.setUserId(revision.getUserId());
         po.setBio(revision.getBio());
+        po.setTagline(revision.getTagline());
+        po.setAvailability(revision.getAvailability());
         po.setStatus(revision.getStatus().name());
         po.setReviewerId(revision.getReviewerId());
         po.setReviewComment(revision.getReviewComment());
@@ -127,7 +147,9 @@ public class CompanionShowcaseRevisionRepositoryImpl implements CompanionShowcas
 
     private CompanionShowcaseRevision toDomain(CompanionShowcaseRevisionPO po) {
         Set<Long> tagIds = new HashSet<>(tagMapper.selectTagIdsByRevisionId(po.getId()));
-        return CompanionShowcaseRevision.restore(po.getId(), po.getUserId(), po.getBio(), tagIds,
+        return CompanionShowcaseRevision.restore(po.getId(), po.getUserId(), po.getBio(), po.getTagline(),
+                po.getAvailability(), tagIds,
+                selectMedia(po.getId(), CompanionShowcaseMediaType.COVER).stream().findFirst().orElse(null),
                 selectMedia(po.getId(), CompanionShowcaseMediaType.PHOTO),
                 selectMedia(po.getId(), CompanionShowcaseMediaType.VIDEO),
                 selectMedia(po.getId(), CompanionShowcaseMediaType.AUDIO),
@@ -137,7 +159,9 @@ public class CompanionShowcaseRevisionRepositoryImpl implements CompanionShowcas
 
     private CompanionShowcaseRevision toDomain(CompanionShowcaseRevisionRowPO row) {
         Set<Long> tagIds = new HashSet<>(tagMapper.selectTagIdsByRevisionId(row.getId()));
-        return CompanionShowcaseRevision.restore(row.getId(), row.getUserId(), row.getBio(), tagIds,
+        return CompanionShowcaseRevision.restore(row.getId(), row.getUserId(), row.getBio(), row.getTagline(),
+                row.getAvailability(), tagIds,
+                selectMedia(row.getId(), CompanionShowcaseMediaType.COVER).stream().findFirst().orElse(null),
                 selectMedia(row.getId(), CompanionShowcaseMediaType.PHOTO),
                 selectMedia(row.getId(), CompanionShowcaseMediaType.VIDEO),
                 selectMedia(row.getId(), CompanionShowcaseMediaType.AUDIO),

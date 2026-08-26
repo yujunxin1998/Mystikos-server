@@ -8,6 +8,7 @@ import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.Http;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -18,10 +19,15 @@ import java.time.Duration;
 public class MinioObjectStorageService implements ObjectStorageService {
 
     private final MinioClient minioClient;
+    private final MinioClient minioPresignClient;
     private final MinioProperties properties;
 
-    public MinioObjectStorageService(MinioClient minioClient, MinioProperties properties) {
+    public MinioObjectStorageService(
+            @Qualifier("minioClient") MinioClient minioClient,
+            @Qualifier("minioPresignClient") MinioClient minioPresignClient,
+            MinioProperties properties) {
         this.minioClient = minioClient;
+        this.minioPresignClient = minioPresignClient;
         this.properties = properties;
     }
 
@@ -44,7 +50,7 @@ public class MinioObjectStorageService implements ObjectStorageService {
     @Override
     public String presignedDownloadUrl(String objectKey, Duration ttl) {
         try {
-            return minioClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
+            return minioPresignClient.getPresignedObjectUrl(GetPresignedObjectUrlArgs.builder()
                     .method(Http.Method.GET)
                     .bucket(properties.getBucket())
                     .object(objectKey)

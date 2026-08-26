@@ -112,6 +112,17 @@ docker build -t mystikos-server:local .
 
 镜像运行时需要把 JAR 挂载到 `/app/mystikos-app.jar`，并通过环境变量或 `/config/` 下的外部配置连接基础设施服务。
 
+### 使用 Compose 更新服务器 JAR
+
+服务器配置集中在项目根目录 `.env`。将新包上传为 `mystikos-app.jar` 后执行：
+
+```bash
+docker compose --env-file .env -f deploy/docker/docker-compose.yaml up -d --force-recreate app
+docker compose --env-file .env -f deploy/docker/docker-compose.yaml logs --tail=100 app
+```
+
+Compose 内部使用 `MINIO_ENDPOINT=http://minio:9000` 连接对象存储，并使用 `MINIO_PUBLIC_ENDPOINT` 生成浏览器可访问的预签名 URL。MinIO 的 9000/9001 仅在 Docker 网络内暴露，宿主机端口由 Nginx 反向代理独占。
+
 ## 常用配置
 
 默认配置位于 `mystikos-app/src/main/resources/application.yml`，本地 Spring profile 配置位于 `application-local.yml`。常用环境变量如下：
@@ -121,6 +132,7 @@ docker build -t mystikos-server:local .
 | `REDIS_HOST` / `REDIS_PORT` | Redis 地址 | `localhost` / `6379` |
 | `REDIS_PASSWORD` | Redis 密码 | `Mystikos` |
 | `MINIO_ENDPOINT` | MinIO API 地址 | `http://localhost:9000` |
+| `MINIO_PUBLIC_ENDPOINT` | 浏览器可访问的 MinIO API 地址，仅用于生成预签名 URL；容器部署时应填写 Nginx 暴露的公网地址 | 默认沿用 `MINIO_ENDPOINT` |
 | `MINIO_ACCESS_KEY` / `MINIO_SECRET_KEY` | MinIO 凭证 | `minioadmin` / `minioadmin` |
 | `JWT_SECRET` | JWT 签名密钥 | 仅提供本地占位值 |
 | `MAIL_ENABLED` | 是否真实发送邮件 | `false` |

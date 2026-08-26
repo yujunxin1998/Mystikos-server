@@ -6,6 +6,38 @@
 name: mystikos
 
 services:
+  app:
+    image: eclipse-temurin:17-jre
+    container_name: mystikos-app
+    restart: unless-stopped
+    working_dir: /app
+    command: ["java", "-XX:MaxRAMPercentage=75.0", "-Dfile.encoding=UTF-8", "-jar", "/app/mystikos-app.jar"]
+    env_file:
+      - ../../.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mystikos
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://116.62.218.227:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-mystikos}
+    ports:
+      - "8099:8099"
+    volumes:
+      - ../../mystikos-app.jar:/app/mystikos-app.jar:ro
+      - ../sql:/app/deploy/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
   postgres:
     image: postgres:17-alpine
     container_name: mystikos-postgres
@@ -14,8 +46,8 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_DB: mystikos
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - F:/javaproj/Mystikos/local-docker/postgres/data:/var/lib/postgresql/data
       # EXCLUDE USING gist 约束依赖的 btree_gist 扩展，只在数据目录第一次初始化时自动跑一次
@@ -50,12 +82,14 @@ services:
     container_name: mystikos-minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    expose:
+      - "9000"
+      - "9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_SERVER_URL: ${MINIO_SERVER_URL:-http://116.62.218.227:9000}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://116.62.218.227:9001}
     volumes:
       - F:/javaproj/Mystikos/local-docker/minIo/data:/data
     healthcheck:

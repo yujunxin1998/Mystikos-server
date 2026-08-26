@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * 应用启动时检查目标 bucket 是否存在，不存在就自动建——本地/测试环境免去手动
@@ -18,7 +19,8 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(MinioProperties.class)
 public class MinioConfig {
 
-    @Bean
+    @Bean("minioClient")
+    @Primary
     public MinioClient minioClient(MinioProperties properties) throws Exception {
         MinioClient client = MinioClient.builder()
                 .endpoint(properties.getEndpoint())
@@ -35,5 +37,16 @@ public class MinioConfig {
             log.info("MinIO bucket 不存在，已自动创建：{}", properties.getBucket());
         }
         return client;
+    }
+
+    /**
+     * 只用于离线计算预签名 URL，不会通过公网地址执行上传或 bucket 检查。
+     */
+    @Bean("minioPresignClient")
+    public MinioClient minioPresignClient(MinioProperties properties) {
+        return MinioClient.builder()
+                .endpoint(properties.effectivePublicEndpoint())
+                .credentials(properties.getAccessKey(), properties.getSecretKey())
+                .build();
     }
 }

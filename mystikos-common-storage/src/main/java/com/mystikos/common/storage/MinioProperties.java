@@ -17,6 +17,12 @@ public class MinioProperties {
      */
     private String endpoint = "http://localhost:9000";
 
+    /**
+     * 浏览器可访问的 MinIO API 地址，仅用于生成预签名 URL。为空时沿用 endpoint。
+     * 容器部署时 endpoint 通常是 http://minio:9000，而该值应为 Nginx 暴露的公网地址。
+     */
+    private String publicEndpoint;
+
     private String accessKey = "minioadmin";
 
     private String secretKey = "minioadmin";
@@ -30,4 +36,8 @@ public class MinioProperties {
      * 预签名下载链接的默认有效期。
      */
     private int presignedUrlTtlMinutes = 15;
+
+    public String effectivePublicEndpoint() {
+        return publicEndpoint == null || publicEndpoint.isBlank() ? endpoint : publicEndpoint;
+    }
 }

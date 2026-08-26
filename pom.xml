@@ -35,6 +35,7 @@
         <module>mystikos-review</module>
         <module>mystikos-trust-safety</module>
         <module>mystikos-notification</module>
+        <module>mystikos-system-operation</module>
 
         <module>mystikos-app</module>
     </modules>

@@ -1,5 +1,6 @@
 package com.mystikos.identity.domain.model;
 
+import com.mystikos.common.dict.DictEnum;
 import com.mystikos.identity.domain.IdentityException;
 
 import java.util.Arrays;
@@ -10,8 +11,11 @@ import java.util.Arrays;
  * 权限编码——业务没定义就不要在框架里编。
  *
  * 会员等级不在这里：见 {@link com.mystikos.common.membership.MembershipTier}。
+ *
+ * <p>实现 {@link DictEnum} 供 {@code IdentityDictSource} 收进字典接口，见
+ * {@code mystikos-system-operation} 模块。
  */
-public enum Role {
+public enum Role implements DictEnum {
 
     /** 未登录/匿名访问的默认权限集合，一般不落库为某个用户的角色分配。 */
     GUEST("GUEST", "游客"),

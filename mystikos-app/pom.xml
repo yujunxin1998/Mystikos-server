@@ -109,6 +109,11 @@
             <artifactId>mystikos-notification</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-system-operation</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Knife4j：只在最终可执行 jar 里引入，业务模块只需要 swagger-annotations-jakarta（见 mystikos-common） -->
         <dependency>

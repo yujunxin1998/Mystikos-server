@@ -146,6 +146,23 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - `NotificationTask`(id, recipientId, channel: INAPP\|EMAIL\|PUSH, templateCode, payload, status: PENDING\|SENT\|FAILED)
 - 消费几乎所有上下文的事件，fan-out 发送；**发送失败不能回滚业务订单**
 
+### System Operation（系统运营，**已实现**）
+- **字典**：不建表，各上下文的枚举实现 `mystikos-common` 的 `DictEnum`（code + displayName），
+  再由该上下文一个 `DictSource` Bean（如 `IdentityDictSource`、`BookingDictSource`）声明贡献哪些枚举，
+  `mystikos-system-operation` 只靠 Spring 收集全部 `DictSource` Bean 聚合展示（`GET /api/v1/dicts`），
+  不做跨模块反射扫描——枚举本身仍是权威来源，跟 `Role`/`RoleController` 那套"只读枚举、不查表"是同一个思路。
+  首批接入：`Role`/`Gender`/`UserStatus`/`CompanionStatus`/`CompanionIdentityApplicationStatus`（identity）、
+  `BookingStatus`（booking），其余枚举以后按同样方式各自加，不要求一次性接完。
+- **系统配置内容**：`SystemDocument`(code, title, content, version, updatedBy, updatedAt)，`code` 是自由字符串
+  （跟 `TagDefinition.category` 一个思路），法律条款（用户协议/隐私政策……）只是第一批用例；后台每次更新
+  （`PUT /api/v1/manage/system-documents/{code}`）都会把版本号加一并旁路落一条修订快照到
+  `sysop_document_revision`，前台展示走公开只读接口 `GET /api/v1/system-documents/{code}`。
+- **操作日志**：`OperationLog`(operatorId, httpMethod, requestPath, queryString, requestBody, responseStatus,
+  success, errorMessage, clientIp, durationMs, occurredAt)，append-only。由 `OperationLogInterceptor`
+  对 `/api/v1/manage/**` 下的非 GET 请求自动记录（`HandlerInterceptor`，跑在 Spring Security 过滤器链之后，
+  能稳拿到当前登录用户），**不需要各业务模块的 Controller 显式调用**；后台检索见
+  `GET /api/v1/manage/operation-logs`。
+
 ## 4. 关键设计决策
 
 1. **金额一律用 `NUMERIC`**，不用浮点类型。

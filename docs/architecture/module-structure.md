@@ -24,6 +24,7 @@ mystikos-server/
 ├── mystikos-review/                 评价评分
 ├── mystikos-trust-safety/           信任与安全
 ├── mystikos-notification/           通知
+├── mystikos-system-operation/       系统运营（枚举字典聚合、系统配置内容、后台操作日志）
 │
 └── mystikos-app/                    启动壳：聚合所有模块的 Spring Boot 主类，MVP 阶段唯一可执行 jar
 ```
@@ -53,7 +54,7 @@ com.mystikos.booking
     └── web                   BookingController，仅暴露本上下文的用例
 ```
 
-其余业务模块（identity / membership / provider-catalog / commerce / gifting / relationship / payment / leaderboard / review / trust-safety / notification）遵循同一模板；`leaderboard` 是纯读侧，没有 `domain/service` 意义上的写聚合，只有 Projection（事件消费 + 定时重算）。
+其余业务模块（identity / membership / provider-catalog / commerce / gifting / relationship / payment / leaderboard / review / trust-safety / notification / system-operation）遵循同一模板；`leaderboard` 是纯读侧，没有 `domain/service` 意义上的写聚合，只有 Projection（事件消费 + 定时重算）；`system-operation` 的字典功能同样没有写聚合，直接聚合各上下文实现的 `DictSource` 接口（`mystikos-common` 提供），不查表。
 
 ## 3. 跨模块通信规则（决定"能不能真正拆得动"）
 

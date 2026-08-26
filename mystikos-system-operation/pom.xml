@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.mystikos</groupId>
+        <artifactId>mystikos-server</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>mystikos-system-operation</artifactId>
+    <packaging>jar</packaging>
+
+    <!--
+        系统运营限界上下文：枚举字典聚合、系统配置内容（法律条款等）、后台操作日志。
+        领域模型见 docs/architecture/domain-model.md，五层结构参照 mystikos-booking。
+    -->
+
+    <dependencies>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- 操作日志需要拿当前登录用户，见 CurrentUserContext 用法 -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <!-- 系统文档修订历史、操作日志列表分页查询 -->
+            <groupId>com.github.pagehelper</groupId>
+            <artifactId>pagehelper-spring-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

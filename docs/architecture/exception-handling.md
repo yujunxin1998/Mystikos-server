@@ -34,6 +34,7 @@
 | 11000–11999 | Review |
 | 12000–12999 | Trust & Safety |
 | 13000–13999 | Notification |
+| 14000–14999 | System Operation |
 
 业务模块尚未逐个建立，号段先占位；每个模块落地时在自己的 `xxx-domain`（或对应子模块）里新增一个 `ResponseCode` 枚举，实现 `IResponseCode`，只使用分配给自己的号段。
 

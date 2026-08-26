@@ -87,14 +87,13 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 升级后发布 `MembershipTierUpgradedEvent`，`mystikos-identity` 订阅并同步投影到 `User.membershipTierLevel/Code`（`MembershipTierUpgradedEventListener`）
 
 ### Provider Catalog（陪玩服务目录）
-- `CompanionProfile`(companionId, displayName, avatarUrl, bio, tags, languages, region, status: PENDING_REVIEW\|ACTIVE\|SUSPENDED, avgRating)
-- `ServiceSku`(companionId, skuId, name, unitPrice, unit=HOUR)
-- 事件：`CompanionOnboarded`、`CompanionApproved`、`ServiceSkuPriceChanged`
-- 排班规则（默认可预约时段模板）归属本上下文；**实际时段占用状态归属 Booking**，因为它要与 `BookingOrder` 做原子一致性约束
+- **本上下文尚未建设**（`mystikos-provider-catalog` 目前只有包声明），最初设想的 `ServiceSku`(多档定价) 没有落地。实际情况是陪玩定价只有一份数据：`hourlyRate` 落在 `mystikos-identity` 的 `CompanionProfile` 上（后台管理接口 `POST/PUT /api/v1/manage/companions`），Booking 下单时经 `CompanionPricingPort` 直接查这份数据，不重复建一份价格
+- 排班规则（默认可预约时段模板）设想归属本上下文；**实际时段占用状态归属 Booking**，因为它要与 `BookingOrder` 做原子一致性约束
 
 ### Booking（预约撮合）
-- `BookingOrder`(id, patronId, companionId, skuId, timeRange: tstzrange, priceSnapshot, status, version)
+- `BookingOrder`(id, patronId, companionId, timeRange: tstzrange, durationHours, priceSnapshot, status, createdAt, version)——没有独立 SKU，价格 = 陪玩当前 `hourlyRate` × `durationHours`，下单时服务端权威计算，不信任客户端传入的价格
 - 状态机：`DRAFT → PENDING_PAYMENT → PAID → MATCHING → ACCEPTED → IN_SERVICE → COMPLETED`，旁路 `CANCELLED / EXPIRED / DISPUTED / REFUNDED`——`DRAFT → PENDING_PAYMENT → PAID` 已接 `mystikos-payment`（`POST /api/v1/bookings/{id}/payment` 发起结账，`PaymentCaptured` 事件推进到 `PAID`），`PAID` 之后的流转方法仍留在聚合上没接用例
+- **支付有效期**：`DRAFT`/`PENDING_PAYMENT` 状态下单 15 分钟内未完成支付自动 `EXPIRED`（`BookingOrder#PAYMENT_VALIDITY`）。双保险实现：读取订单（详情/发起支付/取消）时懒同步一次；`BookingExpirationScheduler` 每分钟批量兜底扫描，避免用户不再打开订单时状态永远停在 `PENDING_PAYMENT`
 - 事件：`BookingCreated`、`BookingPaid`、`BookingAccepted`、`BookingCompleted`、`BookingCancelled`
 - **PostgreSQL 落地要点**：`EXCLUDE USING gist (companion_id WITH =, time_range WITH &&) WHERE (status IN ('HELD','PAID','ACCEPTED'))`，数据库层面保证同一陪玩同一时段不会被两个订单占用
 

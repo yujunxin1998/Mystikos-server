@@ -4,6 +4,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * MVP 阶段唯一的可执行入口：把所有限界上下文模块聚合成一个单体部署。
@@ -13,9 +14,13 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * 不加这个限定，MapperScan 会把 com.mystikos 下所有接口（包括
  * DomainEventPublisher、BookingRepository 这类普通领域接口）都代理成 Bean，
  * 和它们真正的 Spring 实现类冲突（曾经因此炸过：两个 DomainEventPublisher Bean）。
+ *
+ * @EnableScheduling 是全仓库第一次用到定时任务（BookingExpirationScheduler
+ * 扫描逾期未支付订单），单体部署下只有一个实例在跑，不用担心多实例重复执行。
  */
 @SpringBootApplication(scanBasePackages = "com.mystikos")
 @MapperScan(basePackages = "com.mystikos", annotationClass = Mapper.class)
+@EnableScheduling
 public class MystikosApplication {
 
     public static void main(String[] args) {

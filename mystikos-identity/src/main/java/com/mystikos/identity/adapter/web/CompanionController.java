@@ -3,6 +3,7 @@ package com.mystikos.identity.adapter.web;
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.result.PageResult;
 import com.mystikos.identity.adapter.web.dto.AdminCreateCompanionRequest;
+import com.mystikos.identity.adapter.web.dto.AdminUpdateCompanionRequest;
 import com.mystikos.identity.application.service.CompanionApplicationService;
 import com.mystikos.identity.application.service.CompanionStatsView;
 import com.mystikos.identity.application.service.CompanionView;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,6 +47,15 @@ public class CompanionController {
     @SecurityRequirement(name = "bearerAuth")
     public APIResponse<Void> create(@Valid @RequestBody AdminCreateCompanionRequest request) {
         companionApplicationService.createCompanion(request);
+        return APIResponse.ok();
+    }
+
+    @PutMapping("/{userId}")
+    @Operation(summary = "编辑陪玩资料", description = "级别/擅长游戏标签/时薪/接单状态/身份证号/银行信息；时薪只能通过这个接口调整")
+    @SecurityRequirement(name = "bearerAuth")
+    public APIResponse<Void> update(@Parameter(description = "用户ID") @PathVariable Long userId,
+            @Valid @RequestBody AdminUpdateCompanionRequest request) {
+        companionApplicationService.updateCompanion(userId, request);
         return APIResponse.ok();
     }
 

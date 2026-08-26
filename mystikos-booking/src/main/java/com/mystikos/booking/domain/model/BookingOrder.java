@@ -3,6 +3,8 @@ package com.mystikos.booking.domain.model;
 import com.mystikos.booking.domain.BookingException;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -13,43 +15,68 @@ import java.util.Set;
  */
 public class BookingOrder {
 
+    /**
+     * 下单后的支付有效期：超过这个时长仍未支付，订单自动失效，需要重新下单。
+     * 公开给应用层的定时任务（BookingApplicationService#expireOverdueBookings）复用，
+     * 避免"15 分钟"这个业务规则在两处各写一份容易漂移。
+     */
+    public static final Duration PAYMENT_VALIDITY = Duration.ofMinutes(15);
+
     private static final Set<BookingStatus> CANCELLABLE_FROM =
             EnumSet.of(BookingStatus.DRAFT, BookingStatus.PENDING_PAYMENT, BookingStatus.PAID);
+    private static final Set<BookingStatus> EXPIRABLE_FROM =
+            EnumSet.of(BookingStatus.DRAFT, BookingStatus.PENDING_PAYMENT);
 
     private Long id;
     private final Long patronId;
     private final Long companionId;
-    private final Long skuId;
     private final TimeRange timeRange;
+    private final BigDecimal durationHours;
     private final BigDecimal priceSnapshot;
     private BookingStatus status;
+    private final OffsetDateTime createdAt;
     private Long version;
 
-    private BookingOrder(Long id, Long patronId, Long companionId, Long skuId,
-                          TimeRange timeRange, BigDecimal priceSnapshot,
-                          BookingStatus status, Long version) {
+    private BookingOrder(Long id, Long patronId, Long companionId, TimeRange timeRange,
+                          BigDecimal durationHours, BigDecimal priceSnapshot,
+                          BookingStatus status, OffsetDateTime createdAt, Long version) {
         this.id = id;
         this.patronId = patronId;
         this.companionId = companionId;
-        this.skuId = skuId;
         this.timeRange = timeRange;
+        this.durationHours = durationHours;
         this.priceSnapshot = priceSnapshot;
         this.status = status;
+        this.createdAt = createdAt;
         this.version = version;
     }
 
-    /** 创建一笔新预约，初始状态为 DRAFT。 */
-    public static BookingOrder create(Long patronId, Long companionId, Long skuId,
-                                       TimeRange timeRange, BigDecimal priceSnapshot) {
-        return new BookingOrder(null, patronId, companionId, skuId, timeRange, priceSnapshot,
-                BookingStatus.DRAFT, 0L);
+    /** 创建一笔新预约，初始状态为 DRAFT，下单时刻即开始计算 15 分钟支付有效期。 */
+    public static BookingOrder create(Long patronId, Long companionId, TimeRange timeRange,
+                                       BigDecimal durationHours, BigDecimal priceSnapshot) {
+        return new BookingOrder(null, patronId, companionId, timeRange, durationHours, priceSnapshot,
+                BookingStatus.DRAFT, OffsetDateTime.now(), 0L);
     }
 
     /** 从持久化数据重建聚合，仅供仓储实现调用。 */
-    public static BookingOrder restore(Long id, Long patronId, Long companionId, Long skuId,
-                                        TimeRange timeRange, BigDecimal priceSnapshot,
-                                        BookingStatus status, Long version) {
-        return new BookingOrder(id, patronId, companionId, skuId, timeRange, priceSnapshot, status, version);
+    public static BookingOrder restore(Long id, Long patronId, Long companionId, TimeRange timeRange,
+                                        BigDecimal durationHours, BigDecimal priceSnapshot,
+                                        BookingStatus status, OffsetDateTime createdAt, Long version) {
+        return new BookingOrder(id, patronId, companionId, timeRange, durationHours, priceSnapshot,
+                status, createdAt, version);
+    }
+
+    /** 距下单已过 15 分钟且仍处于未支付状态，判定为已失效——由调用方决定是否落库 {@link #expire()}。 */
+    public boolean isOverdue(OffsetDateTime now) {
+        return EXPIRABLE_FROM.contains(status) && now.isAfter(createdAt.plus(PAYMENT_VALIDITY));
+    }
+
+    /** 把逾期未支付的订单标记为失效；只能从 {@link #EXPIRABLE_FROM} 里的状态迁移，供定时任务/懒检查复用。 */
+    public void expire() {
+        if (!EXPIRABLE_FROM.contains(status)) {
+            throw BookingException.statusInvalid("当前状态 " + status + " 不允许标记为失效");
+        }
+        status = BookingStatus.EXPIRED;
     }
 
     public void requestPayment() {
@@ -108,12 +135,12 @@ public class BookingOrder {
         return companionId;
     }
 
-    public Long getSkuId() {
-        return skuId;
-    }
-
     public TimeRange getTimeRange() {
         return timeRange;
+    }
+
+    public BigDecimal getDurationHours() {
+        return durationHours;
     }
 
     public BigDecimal getPriceSnapshot() {
@@ -122,6 +149,15 @@ public class BookingOrder {
 
     public BookingStatus getStatus() {
         return status;
+    }
+
+    public OffsetDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    /** 支付有效期截止时刻，供前端展示倒计时用；跟 {@link #isOverdue} 的判定口径一致。 */
+    public OffsetDateTime getExpiresAt() {
+        return createdAt.plus(PAYMENT_VALIDITY);
     }
 
     public Long getVersion() {

@@ -40,8 +40,25 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <!-- 陪玩时薪查询（CompanionPricingPort 实现），见 infrastructure/acl -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-identity</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <!-- 下单接口从登录态取 patronId，见 CurrentUserContext 用法 -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-security</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+        <dependency>
+            <!-- 我的订单列表分页查询 -->
+            <groupId>com.github.pagehelper</groupId>
+            <artifactId>pagehelper-spring-boot-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>

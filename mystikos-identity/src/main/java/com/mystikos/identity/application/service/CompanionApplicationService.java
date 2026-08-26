@@ -2,6 +2,7 @@ package com.mystikos.identity.application.service;
 
 import com.mystikos.common.result.PageResult;
 import com.mystikos.identity.adapter.web.dto.AdminCreateCompanionRequest;
+import com.mystikos.identity.adapter.web.dto.AdminUpdateCompanionRequest;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.CompanionProfile;
 import com.mystikos.identity.domain.model.CompanionStats;
@@ -78,6 +79,23 @@ public class CompanionApplicationService {
     @Transactional
     public void deleteCompanion(Long userId) {
         revokeCompanionIdentity(userId);
+    }
+
+    /**
+     * 编辑打手台账：级别/擅长游戏标签/时薪/接单状态/身份证号/银行信息，账号字段（手机号/邮箱/
+     * 密码/昵称）不在这里改。时薪只能通过这个后台接口调整，前台没有陪玩自主改价的入口。
+     */
+    @Transactional
+    public void updateCompanion(Long userId, AdminUpdateCompanionRequest request) {
+        Set<Long> requestedTags = request.getTagIds() == null ? Set.of() : request.getTagIds();
+        validateTags(requestedTags);
+
+        CompanionProfile profile = companionProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> IdentityException.companionProfileNotFound(userId));
+        profile.update(request.getLevel(), requestedTags, request.getHourlyRate(), request.getStatus(),
+                request.getIdCardNo(), request.getBankAccountName(), request.getBankAccountNo(),
+                request.getBankName());
+        companionProfileRepository.save(profile);
     }
 
     /**

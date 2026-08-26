@@ -48,13 +48,6 @@ public class BookingOrderPO implements Serializable {
     private Long companionId;
 
     /**
-     * 服务SKU ID
-     */
-    @Schema(description = "服务SKU ID")
-    @TableField("sku_id")
-    private Long skuId;
-
-    /**
      * 预约时段开始时间
      */
     @Schema(description = "预约时段开始时间")
@@ -69,6 +62,13 @@ public class BookingOrderPO implements Serializable {
     private OffsetDateTime timeRangeEnd;
 
     /**
+     * 下单时长（小时），用于按小时计费
+     */
+    @Schema(description = "下单时长（小时）")
+    @TableField("duration_hours")
+    private BigDecimal durationHours;
+
+    /**
      * 下单时的价格快照
      */
     @Schema(description = "下单时的价格快照")
@@ -81,6 +81,13 @@ public class BookingOrderPO implements Serializable {
     @Schema(description = "订单状态")
     @TableField("status")
     private String status;
+
+    /**
+     * 下单时刻，15分钟支付有效期从这里起算
+     */
+    @Schema(description = "下单时刻")
+    @TableField("created_at")
+    private OffsetDateTime createdAt;
 
     /**
      * 乐观锁版本号

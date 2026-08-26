@@ -186,4 +186,22 @@ public class IdentityException extends BusinessException {
         return new IdentityException(IdentityResponseCode.COMPANION_SHOWCASE_NOT_PUBLISHED,
                 "该陪玩尚未发布名片：" + userId);
     }
+
+    public static IdentityException oauthAlreadyBoundToAnotherUser(String provider) {
+        return new IdentityException(IdentityResponseCode.OAUTH_ALREADY_BOUND_TO_ANOTHER_USER,
+                "该第三方账号已被其他用户绑定：" + provider);
+    }
+
+    public static IdentityException oauthBindingNotFound(String provider) {
+        return new IdentityException(IdentityResponseCode.OAUTH_BINDING_NOT_FOUND,
+                "当前账号未绑定：" + provider);
+    }
+
+    public static IdentityException oauthUnbindRequiresOtherLoginMethod() {
+        return new IdentityException(IdentityResponseCode.OAUTH_UNBIND_REQUIRES_OTHER_LOGIN_METHOD);
+    }
+
+    public static IdentityException sensitiveOperationContactRequired() {
+        return new IdentityException(IdentityResponseCode.SENSITIVE_OPERATION_CONTACT_REQUIRED);
+    }
 }

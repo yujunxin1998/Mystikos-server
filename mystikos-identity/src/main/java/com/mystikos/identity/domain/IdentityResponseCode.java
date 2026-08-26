@@ -48,7 +48,11 @@ public enum IdentityResponseCode implements IResponseCode {
     COMPANION_SHOWCASE_MEDIA_LIMIT_EXCEEDED(2035, "名片媒体数量超出上限"),
     COMPANION_SHOWCASE_REVIEW_REASON_REQUIRED(2036, "审核不通过必须填写原因"),
     COMPANION_SHOWCASE_NOT_PUBLISHED(2037, "该陪玩尚未发布名片"),
-    CONTACT_VERIFICATION_REQUIRES_AUTHENTICATION(2038, "绑定联系方式必须先登录");
+    CONTACT_VERIFICATION_REQUIRES_AUTHENTICATION(2038, "绑定联系方式必须先登录"),
+    OAUTH_ALREADY_BOUND_TO_ANOTHER_USER(2039, "该第三方账号已被其他用户绑定"),
+    OAUTH_BINDING_NOT_FOUND(2040, "当前账号未绑定该第三方账号"),
+    OAUTH_UNBIND_REQUIRES_OTHER_LOGIN_METHOD(2041, "解绑后账号将无法登录，请先绑定手机号/邮箱或其他第三方账号"),
+    SENSITIVE_OPERATION_CONTACT_REQUIRED(2042, "该操作需要先绑定邮箱或手机号用于身份校验");
 
     private final int code;
     private final String message;

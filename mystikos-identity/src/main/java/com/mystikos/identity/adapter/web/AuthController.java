@@ -5,6 +5,7 @@ import com.mystikos.common.security.CurrentUserContext;
 import com.mystikos.identity.adapter.web.dto.AuthTokenResponse;
 import com.mystikos.identity.adapter.web.dto.CurrentUserResponse;
 import com.mystikos.identity.adapter.web.dto.LoginRequest;
+import com.mystikos.identity.adapter.web.dto.OAuthBindResultResponse;
 import com.mystikos.identity.adapter.web.dto.OAuthLoginRequest;
 import com.mystikos.identity.adapter.web.dto.OAuthTicketRequest;
 import com.mystikos.identity.adapter.web.dto.RefreshTokenRequest;
@@ -14,6 +15,7 @@ import com.mystikos.identity.application.command.LoginCommand;
 import com.mystikos.identity.application.command.RegisterCommand;
 import com.mystikos.identity.application.service.AuthApplicationService;
 import com.mystikos.identity.application.service.AuthResult;
+import com.mystikos.identity.application.service.OAuthBindOutcome;
 import com.mystikos.identity.application.service.OAuthFlowService;
 import com.mystikos.identity.application.service.UserApplicationService;
 import com.mystikos.identity.application.service.UserProfileView;
@@ -114,6 +116,15 @@ public class AuthController {
     public APIResponse<AuthTokenResponse> redeemOAuthTicket(@Valid @RequestBody OAuthTicketRequest request) {
         AuthResult result = oauthFlowService.redeemTicket(request.getTicket());
         return APIResponse.ok(AuthTokenResponse.from(result));
+    }
+
+    @PostMapping("/oauth/bind-tickets")
+    @Operation(summary = "兑换一次性第三方账号绑定/换绑结果票据",
+            description = "对应 /api/v1/profile/me/oauth/{provider}/bind-authorize 发起的绑定流程，"
+                    + "回调完成后前端拿 URL 上的 oauth_bind_ticket 来这里兑换结果")
+    public APIResponse<OAuthBindResultResponse> redeemOAuthBindTicket(@Valid @RequestBody OAuthTicketRequest request) {
+        OAuthBindOutcome outcome = oauthFlowService.redeemBindTicket(request.getTicket());
+        return APIResponse.ok(OAuthBindResultResponse.from(outcome));
     }
 
     @PostMapping("/refresh-token")

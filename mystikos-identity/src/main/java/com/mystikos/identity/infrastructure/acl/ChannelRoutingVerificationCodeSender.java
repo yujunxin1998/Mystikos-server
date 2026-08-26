@@ -41,6 +41,7 @@ public class ChannelRoutingVerificationCodeSender implements VerificationCodeSen
             case LOGIN -> "log in";
             case RESET_PASSWORD -> "reset your password";
             case BIND_CONTACT -> "verify this contact for your account";
+            case OAUTH_BINDING_CHANGE -> "confirm a third-party account link change for your account";
         };
         return "Your Mystikos verification code is " + code + ". Use it to " + action
                 + ". This code expires in 5 minutes and can only be used once.";

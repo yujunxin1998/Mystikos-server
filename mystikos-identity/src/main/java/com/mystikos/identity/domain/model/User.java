@@ -97,6 +97,23 @@ public class User {
         oauthBindings.add(binding);
     }
 
+    /**
+     * 解绑一个第三方身份。解绑后必须仍满足"手机号/邮箱/第三方绑定至少一项"的不变量
+     * （与构造函数的校验一致），否则拒绝——不允许把账号解到无法登录的状态。
+     * 验证码校验等前置确认由应用服务负责，本方法只管领域不变量。
+     */
+    public void unbindOAuth(String provider) {
+        OAuthBinding existing = oauthBindings.stream()
+                .filter(binding -> binding.provider().equals(provider))
+                .findFirst()
+                .orElseThrow(() -> IdentityException.oauthBindingNotFound(provider));
+        boolean hasOtherIdentity = phone != null || email != null || oauthBindings.size() > 1;
+        if (!hasOtherIdentity) {
+            throw IdentityException.oauthUnbindRequiresOtherLoginMethod();
+        }
+        oauthBindings.remove(existing);
+    }
+
     public void updateProfile(String nickname) {
         this.nickname = nickname;
     }

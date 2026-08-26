@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.Gender;
 import com.mystikos.identity.domain.model.OAuthBinding;
 import com.mystikos.identity.domain.model.Role;
 import com.mystikos.identity.domain.model.User;
 import com.mystikos.identity.domain.model.UserStatus;
 import com.mystikos.identity.domain.repository.UserRepository;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,7 +62,14 @@ public class UserRepositoryImpl implements UserRepository {
             bindingPO.setProvider(binding.provider());
             bindingPO.setProviderUserId(binding.providerUserId());
             bindingPO.setBoundAt(binding.boundAt());
-            oauthBindingMapper.insert(bindingPO);
+            try {
+                oauthBindingMapper.insert(bindingPO);
+            } catch (DuplicateKeyException exception) {
+                // 应用层已经查过一遍"这个第三方账号是否被别人绑了"，这里兜底并发下两个请求
+                // 同时绑同一个第三方账号撞 (provider, provider_user_id) 唯一约束的场景，
+                // 转成业务错误而不是把裸的 DB 异常抛给调用方。
+                throw IdentityException.oauthAlreadyBoundToAnotherUser(binding.provider());
+            }
         }
 
         userTagMapper.deleteByUserId(po.getId());

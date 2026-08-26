@@ -15,6 +15,11 @@ public class InventoryStock {
         this.reservedQty = reservedQty;
     }
 
+    /** 新增商品时初始化库存行，预占数量从 0 开始。 */
+    public static InventoryStock create(Long productId, int initialQty) {
+        return new InventoryStock(productId, initialQty, 0);
+    }
+
     public static InventoryStock restore(Long productId, int availableQty, int reservedQty) {
         return new InventoryStock(productId, availableQty, reservedQty);
     }

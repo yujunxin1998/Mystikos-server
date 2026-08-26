@@ -9,7 +9,7 @@ import java.util.List;
  */
 public class Product {
 
-    private final Long id;
+    private Long id;
     private final Long categoryId;
     private final String name;
     private final String description;
@@ -17,8 +17,8 @@ public class Product {
     private final List<String> images;
     private ProductStatus status;
 
-    public Product(Long id, Long categoryId, String name, String description,
-                   BigDecimal price, List<String> images, ProductStatus status) {
+    private Product(Long id, Long categoryId, String name, String description,
+                     BigDecimal price, List<String> images, ProductStatus status) {
         this.id = id;
         this.categoryId = categoryId;
         this.name = name;
@@ -28,12 +28,30 @@ public class Product {
         this.status = status;
     }
 
+    /** 后台新增商品，默认直接上架。 */
+    public static Product create(Long categoryId, String name, String description,
+                                  BigDecimal price, List<String> images) {
+        return new Product(null, categoryId, name, description, price,
+                images == null ? List.of() : images, ProductStatus.ON_SHELF);
+    }
+
+    /** 从持久化数据重建，仅供仓储实现调用。 */
+    public static Product restore(Long id, Long categoryId, String name, String description,
+                                   BigDecimal price, List<String> images, ProductStatus status) {
+        return new Product(id, categoryId, name, description, price, images, status);
+    }
+
     public boolean isOnShelf() {
         return status == ProductStatus.ON_SHELF;
     }
 
     public Long getId() {
         return id;
+    }
+
+    /** 仅供仓储实现在插入后回填生成的主键。 */
+    public void assignId(Long id) {
+        this.id = id;
     }
 
     public Long getCategoryId() {

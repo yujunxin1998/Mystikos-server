@@ -20,6 +20,18 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public Product save(Product product) {
+        ProductPO po = toPO(product);
+        if (po.getId() == null) {
+            mapper.insert(po);
+            product.assignId(po.getId());
+        } else {
+            mapper.updateById(po);
+        }
+        return product;
+    }
+
+    @Override
     public Optional<Product> findById(Long id) {
         return Optional.ofNullable(mapper.selectById(id)).map(this::toDomain);
     }
@@ -33,11 +45,24 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .toList();
     }
 
+    private ProductPO toPO(Product product) {
+        ProductPO po = new ProductPO();
+        po.setId(product.getId());
+        po.setCategoryId(product.getCategoryId());
+        po.setName(product.getName());
+        po.setDescription(product.getDescription());
+        po.setPrice(product.getPrice());
+        po.setImages(product.getImages() == null || product.getImages().isEmpty()
+                ? null : String.join(",", product.getImages()));
+        po.setStatus(product.getStatus().name());
+        return po;
+    }
+
     private Product toDomain(ProductPO po) {
         List<String> images = po.getImages() == null || po.getImages().isBlank()
                 ? List.of()
                 : Arrays.asList(po.getImages().split(","));
-        return new Product(po.getId(), po.getCategoryId(), po.getName(), po.getDescription(),
+        return Product.restore(po.getId(), po.getCategoryId(), po.getName(), po.getDescription(),
                 po.getPrice(), images, ProductStatus.valueOf(po.getStatus()));
     }
 }

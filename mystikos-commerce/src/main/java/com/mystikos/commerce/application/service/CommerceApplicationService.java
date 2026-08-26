@@ -2,6 +2,7 @@ package com.mystikos.commerce.application.service;
 
 import com.mystikos.commerce.application.command.AddToCartCommand;
 import com.mystikos.commerce.application.command.CreateOrderCommand;
+import com.mystikos.commerce.application.command.CreateProductCommand;
 import com.mystikos.commerce.application.port.PaymentCheckoutResult;
 import com.mystikos.commerce.application.port.PaymentPort;
 import com.mystikos.commerce.domain.CommerceException;
@@ -63,6 +64,16 @@ public class CommerceApplicationService {
 
     public Product getProduct(Long productId) {
         return productRepository.findById(productId).orElseThrow(() -> CommerceException.productNotFound(productId));
+    }
+
+    /** 后台新增商品：落库后一并初始化库存行，产品创建即可下单，不需要再单独一步配置库存。 */
+    @Transactional
+    public Long createProduct(CreateProductCommand command) {
+        Product product = Product.create(command.categoryId(), command.name(), command.description(),
+                command.price(), command.images());
+        Product saved = productRepository.save(product);
+        inventoryStockRepository.insert(InventoryStock.create(saved.getId(), command.initialStock()));
+        return saved.getId();
     }
 
     @Transactional

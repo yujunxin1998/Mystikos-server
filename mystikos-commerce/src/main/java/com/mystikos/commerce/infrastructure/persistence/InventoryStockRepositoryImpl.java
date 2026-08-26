@@ -23,11 +23,20 @@ public class InventoryStockRepositoryImpl implements InventoryStockRepository {
 
     @Override
     public InventoryStock save(InventoryStock stock) {
+        mapper.updateById(toPO(stock));
+        return stock;
+    }
+
+    @Override
+    public void insert(InventoryStock stock) {
+        mapper.insert(toPO(stock));
+    }
+
+    private InventoryStockPO toPO(InventoryStock stock) {
         InventoryStockPO po = new InventoryStockPO();
         po.setProductId(stock.getProductId());
         po.setAvailableQty(stock.getAvailableQty());
         po.setReservedQty(stock.getReservedQty());
-        mapper.updateById(po);
-        return stock;
+        return po;
     }
 }

@@ -10,11 +10,11 @@ import java.util.List;
 public class Product {
 
     private Long id;
-    private final Long categoryId;
-    private final String name;
-    private final String description;
-    private final BigDecimal price;
-    private final List<String> images;
+    private Long categoryId;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private List<String> images;
     private ProductStatus status;
 
     private Product(Long id, Long categoryId, String name, String description,
@@ -39,6 +39,20 @@ public class Product {
     public static Product restore(Long id, Long categoryId, String name, String description,
                                    BigDecimal price, List<String> images, ProductStatus status) {
         return new Product(id, categoryId, name, description, price, images, status);
+    }
+
+    /** 后台编辑商品：整体覆盖式更新基础信息，不涉及库存。 */
+    public void updateDetails(Long categoryId, String name, String description,
+                               BigDecimal price, List<String> images) {
+        this.categoryId = categoryId;
+        this.name = name;
+        this.description = description;
+        this.price = price;
+        this.images = images == null ? List.of() : images;
+    }
+
+    public void changeStatus(ProductStatus status) {
+        this.status = status;
     }
 
     public boolean isOnShelf() {

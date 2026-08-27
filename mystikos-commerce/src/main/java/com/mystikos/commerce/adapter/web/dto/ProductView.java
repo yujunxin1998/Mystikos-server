@@ -1,6 +1,7 @@
 package com.mystikos.commerce.adapter.web.dto;
 
 import com.mystikos.commerce.domain.model.Product;
+import com.mystikos.commerce.domain.model.ProductStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,6 +34,9 @@ public class ProductView implements Serializable {
     @Schema(description = "图片URL列表")
     private List<String> images;
 
+    @Schema(description = "上下架状态")
+    private ProductStatus status;
+
     public static ProductView from(Product product) {
         ProductView view = new ProductView();
         view.setId(product.getId());
@@ -41,6 +45,7 @@ public class ProductView implements Serializable {
         view.setDescription(product.getDescription());
         view.setPrice(product.getPrice());
         view.setImages(product.getImages());
+        view.setStatus(product.getStatus());
         return view;
     }
 }

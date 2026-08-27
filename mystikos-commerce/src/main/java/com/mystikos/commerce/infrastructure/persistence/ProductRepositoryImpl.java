@@ -1,9 +1,12 @@
 package com.mystikos.commerce.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.mystikos.commerce.domain.model.Product;
 import com.mystikos.commerce.domain.model.ProductStatus;
 import com.mystikos.commerce.domain.repository.ProductRepository;
+import com.mystikos.common.result.PageResult;
 import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
@@ -43,6 +46,17 @@ public class ProductRepositoryImpl implements ProductRepository {
                 .stream()
                 .map(this::toDomain)
                 .toList();
+    }
+
+    @Override
+    public PageResult<Product> findPage(ProductStatus status, int pageNum, int pageSize) {
+        PageHelper.startPage(pageNum, pageSize);
+        List<ProductPO> pos = mapper.selectList(Wrappers.<ProductPO>lambdaQuery()
+                .eq(status != null, ProductPO::getStatus, status == null ? null : status.name())
+                .orderByDesc(ProductPO::getId));
+        PageInfo<ProductPO> pageInfo = new PageInfo<>(pos);
+        List<Product> products = pos.stream().map(this::toDomain).toList();
+        return PageResult.of(products, pageInfo.getTotal(), pageNum, pageSize);
     }
 
     private ProductPO toPO(Product product) {

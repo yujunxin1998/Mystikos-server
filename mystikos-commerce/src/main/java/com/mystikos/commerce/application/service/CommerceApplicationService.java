@@ -3,6 +3,7 @@ package com.mystikos.commerce.application.service;
 import com.mystikos.commerce.application.command.AddToCartCommand;
 import com.mystikos.commerce.application.command.CreateOrderCommand;
 import com.mystikos.commerce.application.command.CreateProductCommand;
+import com.mystikos.commerce.application.command.UpdateProductCommand;
 import com.mystikos.commerce.application.port.PaymentCheckoutResult;
 import com.mystikos.commerce.application.port.PaymentPort;
 import com.mystikos.commerce.domain.CommerceException;
@@ -13,6 +14,7 @@ import com.mystikos.commerce.domain.model.MerchandiseOrder;
 import com.mystikos.commerce.domain.model.OrderLineItem;
 import com.mystikos.commerce.domain.model.OrderStatus;
 import com.mystikos.commerce.domain.model.Product;
+import com.mystikos.commerce.domain.model.ProductStatus;
 import com.mystikos.commerce.domain.model.WishlistItem;
 import com.mystikos.commerce.domain.repository.CartItemRepository;
 import com.mystikos.commerce.domain.repository.InventoryStockRepository;
@@ -65,6 +67,23 @@ public class CommerceApplicationService {
 
     public Product getProduct(Long productId) {
         return productRepository.findById(productId).orElseThrow(() -> CommerceException.productNotFound(productId));
+    }
+
+    /** 后台分页查询商品，不限上下架状态；status 非空则按状态过滤。 */
+    public PageResult<Product> listProductsForAdmin(ProductStatus status, int pageNum, int pageSize) {
+        return productRepository.findPage(status, pageNum, pageSize);
+    }
+
+    /** 后台编辑商品：整体覆盖式更新基础信息，status 不传则保持原状态。不涉及库存调整。 */
+    @Transactional
+    public Product updateProduct(Long productId, UpdateProductCommand command) {
+        Product product = getProduct(productId);
+        product.updateDetails(command.categoryId(), command.name(), command.description(),
+                command.price(), command.images());
+        if (command.status() != null) {
+            product.changeStatus(command.status());
+        }
+        return productRepository.save(product);
     }
 
     /** 后台新增商品：落库后一并初始化库存行，产品创建即可下单，不需要再单独一步配置库存。 */

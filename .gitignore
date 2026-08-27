@@ -11,3 +11,7 @@ HELP.md
 
 # Local runtime secrets. Keep the example file tracked.
 .env
+
+# RSA key material for login-credential encryption (see README). Never commit real keys;
+# generate locally with the openssl commands in the README and point .env at the files.
+/deploy/keys/

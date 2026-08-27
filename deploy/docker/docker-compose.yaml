@@ -24,12 +24,22 @@ services:
       MINIO_PUBLIC_ENDPOINT: ${MINIO_PUBLIC_ENDPOINT:-http://116.62.218.227:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-mystikos}
+      # 登录密码 RSA 加密（见根目录 README「登录密码 RSA 加密」一节）。密钥文件通过下面的只读
+      # volume 挂载进容器，不打包进镜像、不进 Git；LOGIN_RSA_ENABLED=false 时可以不挂载这两个文件。
+      LOGIN_RSA_ENABLED: ${LOGIN_RSA_ENABLED:-false}
+      LOGIN_RSA_KEY_ID: ${LOGIN_RSA_KEY_ID:-login-key-v1}
+      LOGIN_RSA_PUBLIC_KEY_PATH: ${LOGIN_RSA_PUBLIC_KEY_PATH:-/run/secrets/login-public-key.pem}
+      LOGIN_RSA_PRIVATE_KEY_PATH: ${LOGIN_RSA_PRIVATE_KEY_PATH:-/run/secrets/login-private-key.pem}
     ports:
       - "8099:8099"
     volumes:
       - ../../mystikos-app.jar:/app/mystikos-app.jar:ro
       - ../sql:/app/deploy/sql:ro
+      # 需要启用登录 RSA 加密时再取消注释这两行，deploy/keys/login/ 换成实际密钥文件所在目录
+      # （该目录已在 .gitignore 排除，不会被提交）。LOGIN_RSA_ENABLED=false（默认）时不需要挂载——
+      # 挂载一个宿主机不存在的文件，Docker 会在宿主机上自动创建出一个空目录占位，反而留下垃圾文件。
+      # - ../keys/login/public-key.pem:/run/secrets/login-public-key.pem:ro
+      # - ../keys/login/private-key.pem:/run/secrets/login-private-key.pem:ro
     depends_on:
       postgres:
         condition: service_healthy

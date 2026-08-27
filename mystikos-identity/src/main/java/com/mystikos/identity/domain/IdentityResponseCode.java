@@ -52,7 +52,11 @@ public enum IdentityResponseCode implements IResponseCode {
     OAUTH_ALREADY_BOUND_TO_ANOTHER_USER(2039, "该第三方账号已被其他用户绑定"),
     OAUTH_BINDING_NOT_FOUND(2040, "当前账号未绑定该第三方账号"),
     OAUTH_UNBIND_REQUIRES_OTHER_LOGIN_METHOD(2041, "解绑后账号将无法登录，请先绑定手机号/邮箱或其他第三方账号"),
-    SENSITIVE_OPERATION_CONTACT_REQUIRED(2042, "该操作需要先绑定邮箱或手机号用于身份校验");
+    SENSITIVE_OPERATION_CONTACT_REQUIRED(2042, "该操作需要先绑定邮箱或手机号用于身份校验"),
+    LOGIN_ENCRYPTION_REQUIRED(2043, "密码登录需要提交加密后的凭证"),
+    LOGIN_KEY_NOT_FOUND(2044, "登录密钥已过期，请刷新页面重试"),
+    LOGIN_CREDENTIAL_DECRYPTION_FAILED(2045, "登录请求校验失败，请重新尝试"),
+    LOGIN_ENCRYPTION_NOT_CONFIGURED(2046, "登录加密功能暂未启用");
 
     private final int code;
     private final String message;

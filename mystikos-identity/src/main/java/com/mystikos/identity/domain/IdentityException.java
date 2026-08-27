@@ -204,4 +204,27 @@ public class IdentityException extends BusinessException {
     public static IdentityException sensitiveOperationContactRequired() {
         return new IdentityException(IdentityResponseCode.SENSITIVE_OPERATION_CONTACT_REQUIRED);
     }
+
+    /** enabled=true 时密码登录缺少 keyId/encryptedCredential（不允许回退明文）。 */
+    public static IdentityException loginEncryptionRequired() {
+        return new IdentityException(IdentityResponseCode.LOGIN_ENCRYPTION_REQUIRED);
+    }
+
+    /** 请求里的 keyId 跟当前生效密钥不一致（含密钥轮换后仍在用旧版本号的情况）。 */
+    public static IdentityException loginKeyNotFound() {
+        return new IdentityException(IdentityResponseCode.LOGIN_KEY_NOT_FOUND);
+    }
+
+    /**
+     * Base64 格式错误、密文长度不对、密文被篡改、私钥解密失败等全部落这一个错误码——
+     * 不区分具体原因回给客户端，避免给攻击者可用的探测信号。
+     */
+    public static IdentityException loginCredentialDecryptionFailed() {
+        return new IdentityException(IdentityResponseCode.LOGIN_CREDENTIAL_DECRYPTION_FAILED);
+    }
+
+    /** 登录加密未启用又没有配置密钥（本地开发/紧急回退场景）时调用公钥接口。 */
+    public static IdentityException loginEncryptionNotConfigured() {
+        return new IdentityException(IdentityResponseCode.LOGIN_ENCRYPTION_NOT_CONFIGURED);
+    }
 }

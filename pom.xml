@@ -142,6 +142,16 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <plugin>
+                <!--
+                    父 POM 不是 spring-boot-starter-parent，默认继承 Maven super POM 里很老的
+                    surefire 版本，不认识 JUnit 5（会直接 0 测试静默跳过）。显式声明一个支持
+                    JUnit 5 的版本，任何模块加 src/test 之后测试才会真的跑起来。
+                -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
         </plugins>
     </build>
 </project>

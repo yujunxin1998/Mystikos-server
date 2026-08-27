@@ -95,5 +95,12 @@
             <artifactId>mystikos-common-storage</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <!-- 登录 RSA 加密相关测试（LoginKeyProvider/RsaLoginCredentialDecryptor/AuthController），
+                 只用到独立 JUnit5 + MockMvc standalone setup，不起 Spring 容器，不需要 DB/Redis。 -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

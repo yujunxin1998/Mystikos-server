@@ -140,8 +140,84 @@ Compose 内部使用 `MINIO_ENDPOINT=http://minio:9000` 连接对象存储，并
 | `DISCORD_REDIRECT_URI` | 后端 Discord OAuth 回调地址，由部署环境配置 | 空 |
 | `OAUTH_FRONTEND_RETURN_URI` | OAuth 完成后携带一次性票据跳回的前端地址 | 空 |
 | `SQL_DIR` | Flyway 脚本目录 | `deploy/sql` |
+| `LOGIN_RSA_ENABLED` | 是否启用登录密码 RSA 加密 | `false`（`.env.example`），代码默认值为 `true` |
+| `LOGIN_RSA_KEY_ID` | 当前生效的登录公钥版本号 | `login-key-v1` |
+| `LOGIN_RSA_PUBLIC_KEY_PATH` / `LOGIN_RSA_PRIVATE_KEY_PATH` | 登录加密 PEM 密钥文件路径（`enabled=true` 时必填） | 空 |
 
 数据库连接默认使用 `jdbc:postgresql://localhost:5432/mystikos`，用户名和密码均为 `postgres`。真实密钥和生产凭证必须通过环境变量或外部配置注入，不应提交到仓库。
+
+## 登录密码 RSA 加密
+
+前端用后端下发的 RSA 公钥加密登录密码，后端用对应私钥解密后复用原有 BCrypt 校验流程；只保护登录请求里的密码本身，**不能替代 HTTPS**——生产环境必须同时启用 HTTPS，这个功能只是防止密码在应用层（日志、中间代理、浏览器开发者工具网络面板等）以明文形式出现。
+
+算法约定：RSA ≥ 2048 位，`RSA/ECB/OAEPWithSHA-256AndMGF1Padding`，OAEP 摘要与 MGF1 摘要均为 SHA-256，密文 Base64 编码——与浏览器 `window.crypto.subtle.encrypt({ name: "RSA-OAEP" }, ...)` 的默认参数一致。
+
+### 生成密钥对
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out private-key.pem
+openssl rsa -pubout -in private-key.pem -out public-key.pem
+```
+
+`private-key.pem` 是 PKCS8 格式（`genpkey` 默认产出），`public-key.pem` 是 X.509 SubjectPublicKeyInfo 格式——都是 `LoginKeyProvider` 直接能读的格式，不需要转换。**私钥文件不能提交到 Git**：本地建议放在 `deploy/keys/login/`（已在 `.gitignore` 排除），生产环境从 Docker volume 或 secret 挂载。
+
+### 本地开发
+
+`.env.example` 里 `LOGIN_RSA_ENABLED=false`，默认走原有明文密码登录，不需要生成密钥。要在本地联调加密流程：
+
+1. 用上面的命令生成一对密钥，放到 `deploy/keys/login/`。
+2. 在 `.env` 里设置：
+   ```
+   LOGIN_RSA_ENABLED=true
+   LOGIN_RSA_PUBLIC_KEY_PATH=deploy/keys/login/public-key.pem
+   LOGIN_RSA_PRIVATE_KEY_PATH=deploy/keys/login/private-key.pem
+   ```
+3. 重启应用；`GET /api/v1/auth/public-key` 应该能返回公钥。
+
+### 接口
+
+```
+GET /api/v1/auth/public-key   （无需登录）
+```
+
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "keyId": "login-key-v1",
+    "algorithm": "RSA-OAEP-256",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----\n"
+  }
+}
+```
+
+```
+POST /api/v1/auth/login
+```
+
+```json
+{
+  "channel": "EMAIL",
+  "identifier": "user@example.com",
+  "credentialType": "PASSWORD",
+  "keyId": "login-key-v1",
+  "encryptedCredential": "<Base64 编码的 RSA 密文>"
+}
+```
+
+`LOGIN_RSA_ENABLED=true` 时密码登录必须带 `keyId` + `encryptedCredential`，不能再传明文 `credential`；验证码登录（`credentialType: VERIFICATION_CODE`）不受影响，继续用明文 `credential` 字段。
+
+### Docker Compose
+
+`deploy/docker/docker-compose.yaml` 的 `app` 服务已经声明好 `LOGIN_RSA_*` 环境变量（默认 `LOGIN_RSA_ENABLED=false`）。要在部署环境启用，把密钥文件放到宿主机上的一个目录，取消该文件里两行密钥 volume 的注释，并在部署用的 `.env` 里设置：
+
+```bash
+LOGIN_RSA_ENABLED=true
+LOGIN_RSA_KEY_ID=login-key-v1
+LOGIN_RSA_PUBLIC_KEY_PATH=/run/secrets/login-public-key.pem
+LOGIN_RSA_PRIVATE_KEY_PATH=/run/secrets/login-private-key.pem
+```
 
 ## 开发约定
 

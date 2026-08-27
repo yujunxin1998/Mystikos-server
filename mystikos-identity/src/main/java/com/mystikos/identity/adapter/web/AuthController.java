@@ -4,6 +4,7 @@ import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.security.CurrentUserContext;
 import com.mystikos.identity.adapter.web.dto.AuthTokenResponse;
 import com.mystikos.identity.adapter.web.dto.CurrentUserResponse;
+import com.mystikos.identity.adapter.web.dto.LoginPublicKeyResponse;
 import com.mystikos.identity.adapter.web.dto.LoginRequest;
 import com.mystikos.identity.adapter.web.dto.OAuthBindResultResponse;
 import com.mystikos.identity.adapter.web.dto.OAuthLoginRequest;
@@ -21,6 +22,8 @@ import com.mystikos.identity.application.service.UserApplicationService;
 import com.mystikos.identity.application.service.UserProfileView;
 import com.mystikos.identity.domain.IdentityException;
 import com.mystikos.identity.domain.model.VerificationPurpose;
+import com.mystikos.identity.infrastructure.crypto.LoginCredentialResolver;
+import com.mystikos.identity.infrastructure.crypto.LoginKeyProvider;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -49,13 +52,25 @@ public class AuthController {
     private final AuthApplicationService authApplicationService;
     private final UserApplicationService userApplicationService;
     private final OAuthFlowService oauthFlowService;
+    private final LoginKeyProvider loginKeyProvider;
+    private final LoginCredentialResolver loginCredentialResolver;
 
     public AuthController(AuthApplicationService authApplicationService,
                            UserApplicationService userApplicationService,
-                           OAuthFlowService oauthFlowService) {
+                           OAuthFlowService oauthFlowService,
+                           LoginKeyProvider loginKeyProvider,
+                           LoginCredentialResolver loginCredentialResolver) {
         this.authApplicationService = authApplicationService;
         this.userApplicationService = userApplicationService;
         this.oauthFlowService = oauthFlowService;
+        this.loginKeyProvider = loginKeyProvider;
+        this.loginCredentialResolver = loginCredentialResolver;
+    }
+
+    @GetMapping("/public-key")
+    @Operation(summary = "获取登录公钥", description = "RSA-OAEP-256 公钥，前端用它加密登录密码；无需登录即可访问")
+    public APIResponse<LoginPublicKeyResponse> publicKey() {
+        return APIResponse.ok(loginKeyProvider.currentPublicKey());
     }
 
     @PostMapping("/verification-codes")
@@ -79,11 +94,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "登录", description = "密码或验证码二选一")
+    @Operation(summary = "登录", description = "密码或验证码二选一；启用登录加密（默认开启）时密码登录须提交 "
+            + "GET /public-key 拿到的 keyId 和 RSA 加密后的 encryptedCredential，不能再传明文密码")
     public APIResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
+        String credential = loginCredentialResolver.resolve(request.getCredentialType(), request.getCredential(),
+                request.getKeyId(), request.getEncryptedCredential());
         AuthResult result = authApplicationService.login(new LoginCommand(
-                request.getChannel(), request.getIdentifier(), request.getCredentialType(),
-                request.getCredential()));
+                request.getChannel(), request.getIdentifier(), request.getCredentialType(), credential));
         return APIResponse.ok(AuthTokenResponse.from(result));
     }
 

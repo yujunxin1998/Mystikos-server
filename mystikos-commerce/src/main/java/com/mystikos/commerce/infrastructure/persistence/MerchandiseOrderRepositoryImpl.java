@@ -61,9 +61,15 @@ public class MerchandiseOrderRepositoryImpl implements MerchandiseOrderRepositor
 
     @Override
     public PageResult<MerchandiseOrder> findByPatronId(Long patronId, int pageNum, int pageSize) {
+        return findPage(null, patronId, pageNum, pageSize);
+    }
+
+    @Override
+    public PageResult<MerchandiseOrder> findPage(OrderStatus status, Long patronId, int pageNum, int pageSize) {
         PageHelper.startPage(pageNum, pageSize);
         List<MerchandiseOrderPO> orderPOs = orderMapper.selectList(Wrappers.<MerchandiseOrderPO>lambdaQuery()
-                .eq(MerchandiseOrderPO::getPatronId, patronId)
+                .eq(patronId != null, MerchandiseOrderPO::getPatronId, patronId)
+                .eq(status != null, MerchandiseOrderPO::getStatus, status == null ? null : status.name())
                 .orderByDesc(MerchandiseOrderPO::getCreatedAt));
         PageInfo<MerchandiseOrderPO> pageInfo = new PageInfo<>(orderPOs);
         if (orderPOs.isEmpty()) {

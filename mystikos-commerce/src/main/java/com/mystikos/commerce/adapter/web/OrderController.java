@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 下单/取消，尚未接支付——和 mystikos-booking 的 BookingController 是同一个阶段，
- * 订单创建后停在 DRAFT，PENDING_PAYMENT/PAID 之后的流转方法先留在聚合上不接用例。
+ * C 端下单/查询/取消。PAID 之后的发货流转、后台取消/退款由
+ * {@link OrderAdminController} 驱动，不在这里开放给买家自己操作。
  */
 @RestController
 @RequestMapping("/api/v1/orders")

@@ -12,6 +12,8 @@ public class MerchandiseOrder {
 
     private static final Set<OrderStatus> CANCELLABLE_FROM =
             EnumSet.of(OrderStatus.DRAFT, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID);
+    private static final Set<OrderStatus> REFUNDABLE_FROM =
+            EnumSet.of(OrderStatus.PAID, OrderStatus.FULFILLING, OrderStatus.SHIPPED, OrderStatus.COMPLETED);
 
     private Long id;
     private final Long patronId;
@@ -72,6 +74,13 @@ public class MerchandiseOrder {
             throw CommerceException.statusInvalid("当前状态 " + status + " 不允许取消");
         }
         status = OrderStatus.CANCELLED;
+    }
+
+    public void refund() {
+        if (!REFUNDABLE_FROM.contains(status)) {
+            throw CommerceException.statusInvalid("当前状态 " + status + " 不允许退款");
+        }
+        status = OrderStatus.REFUNDED;
     }
 
     private void transition(OrderStatus expected, OrderStatus next) {

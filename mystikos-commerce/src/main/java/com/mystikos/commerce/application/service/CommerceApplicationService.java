@@ -177,27 +177,19 @@ public class CommerceApplicationService {
 
     @Transactional
     public void cancelOrder(Long patronId, Long orderId) {
-        MerchandiseOrder order = merchandiseOrderRepository.findById(orderId)
-                .orElseThrow(() -> CommerceException.orderNotFound(orderId));
+        MerchandiseOrder order = requireOrder(orderId);
         if (!order.getPatronId().equals(patronId)) {
             throw CommerceException.orderNotFound(orderId);
         }
         order.cancel();
         merchandiseOrderRepository.save(order);
-
-        for (OrderLineItem item : order.getItems()) {
-            inventoryStockRepository.findByProductId(item.productId()).ifPresent(stock -> {
-                stock.release(item.quantity());
-                inventoryStockRepository.save(stock);
-            });
-        }
+        releaseInventory(order);
     }
 
     /** 发起结账：把订单转 PENDING_PAYMENT，返回前端完成支付所需的 clientSecret。 */
     @Transactional
     public PaymentCheckoutResult requestPayment(Long orderId, Long patronId) {
-        MerchandiseOrder order = merchandiseOrderRepository.findById(orderId)
-                .orElseThrow(() -> CommerceException.orderNotFound(orderId));
+        MerchandiseOrder order = requireOrder(orderId);
         if (!order.getPatronId().equals(patronId)) {
             throw CommerceException.orderNotFound(orderId);
         }
@@ -214,8 +206,7 @@ public class CommerceApplicationService {
     /** 由 PaymentCapturedEventListener 在支付成功后调用，把订单推进到 PAID。 */
     @Transactional
     public void markPaid(Long orderId) {
-        MerchandiseOrder order = merchandiseOrderRepository.findById(orderId)
-                .orElseThrow(() -> CommerceException.orderNotFound(orderId));
+        MerchandiseOrder order = requireOrder(orderId);
         if (order.getStatus() == OrderStatus.PAID) {
             return;
         }
@@ -224,20 +215,68 @@ public class CommerceApplicationService {
     }
 
     public OrderView getOrder(Long orderId) {
-        MerchandiseOrder order = merchandiseOrderRepository.findById(orderId)
-                .orElseThrow(() -> CommerceException.orderNotFound(orderId));
-        return new OrderView(order.getId(), order.getPatronId(), order.getItems(), order.getTotalAmount(),
-                order.getShippingAddress(), order.getStatus(), order.getCreatedAt());
+        return toOrderView(requireOrder(orderId));
     }
 
     /** 我的商品订单列表，按下单时间倒序分页。 */
     public PageResult<OrderView> listMyOrders(Long patronId, int pageNum, int pageSize) {
         PageResult<MerchandiseOrder> page = merchandiseOrderRepository.findByPatronId(patronId, pageNum, pageSize);
-        List<OrderView> views = page.records().stream()
-                .map(order -> new OrderView(order.getId(), order.getPatronId(), order.getItems(),
-                        order.getTotalAmount(), order.getShippingAddress(), order.getStatus(), order.getCreatedAt()))
-                .toList();
+        List<OrderView> views = page.records().stream().map(this::toOrderView).toList();
         return PageResult.of(views, page.total(), page.pageNum(), page.pageSize());
+    }
+
+    /** 后台分页查询订单，不限买家，可按状态/买家ID过滤。 */
+    public PageResult<OrderView> listOrdersForAdmin(OrderStatus status, Long patronId, int pageNum, int pageSize) {
+        PageResult<MerchandiseOrder> page = merchandiseOrderRepository.findPage(status, patronId, pageNum, pageSize);
+        List<OrderView> views = page.records().stream().map(this::toOrderView).toList();
+        return PageResult.of(views, page.total(), page.pageNum(), page.pageSize());
+    }
+
+    /** 后台推进订单：PAID → FULFILLING。 */
+    @Transactional
+    public OrderView startFulfillingOrder(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        order.startFulfilling();
+        return toOrderView(merchandiseOrderRepository.save(order));
+    }
+
+    /** 后台推进订单：FULFILLING → SHIPPED。 */
+    @Transactional
+    public OrderView shipOrder(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        order.ship();
+        return toOrderView(merchandiseOrderRepository.save(order));
+    }
+
+    /** 后台推进订单：SHIPPED → COMPLETED。 */
+    @Transactional
+    public OrderView completeOrder(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        order.complete();
+        return toOrderView(merchandiseOrderRepository.save(order));
+    }
+
+    /** 后台取消订单：不限买家本人，DRAFT/PENDING_PAYMENT/PAID 状态才允许，取消后释放预占库存。 */
+    @Transactional
+    public OrderView adminCancelOrder(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        order.cancel();
+        MerchandiseOrder saved = merchandiseOrderRepository.save(order);
+        releaseInventory(saved);
+        return toOrderView(saved);
+    }
+
+    /**
+     * 后台退款：PAID/FULFILLING/SHIPPED/COMPLETED 状态才允许。和取消一样把预占库存放回可售——
+     * 聚合暂无"已发货、库存不可退回"的更细状态区分，先按可退货处理。
+     */
+    @Transactional
+    public OrderView refundOrder(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        order.refund();
+        MerchandiseOrder saved = merchandiseOrderRepository.save(order);
+        releaseInventory(saved);
+        return toOrderView(saved);
     }
 
     private Product requireOnShelf(Long productId) {
@@ -247,5 +286,24 @@ public class CommerceApplicationService {
             throw CommerceException.productOffShelf(productId);
         }
         return product;
+    }
+
+    private MerchandiseOrder requireOrder(Long orderId) {
+        return merchandiseOrderRepository.findById(orderId)
+                .orElseThrow(() -> CommerceException.orderNotFound(orderId));
+    }
+
+    private OrderView toOrderView(MerchandiseOrder order) {
+        return new OrderView(order.getId(), order.getPatronId(), order.getItems(), order.getTotalAmount(),
+                order.getShippingAddress(), order.getStatus(), order.getCreatedAt());
+    }
+
+    private void releaseInventory(MerchandiseOrder order) {
+        for (OrderLineItem item : order.getItems()) {
+            inventoryStockRepository.findByProductId(item.productId()).ifPresent(stock -> {
+                stock.release(item.quantity());
+                inventoryStockRepository.save(stock);
+            });
+        }
     }
 }

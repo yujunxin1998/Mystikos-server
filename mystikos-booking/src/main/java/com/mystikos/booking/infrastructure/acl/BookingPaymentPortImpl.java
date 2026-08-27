@@ -3,8 +3,10 @@ package com.mystikos.booking.infrastructure.acl;
 import com.mystikos.booking.application.port.PaymentCheckoutResult;
 import com.mystikos.booking.application.port.PaymentPort;
 import com.mystikos.payment.application.command.CreatePaymentIntentCommand;
+import com.mystikos.payment.application.port.PaymentScene;
 import com.mystikos.payment.application.service.PaymentApplicationService;
 import com.mystikos.payment.application.service.PaymentIntentResult;
+import com.mystikos.payment.domain.model.PaymentProvider;
 import com.mystikos.payment.domain.model.SourceType;
 import org.springframework.stereotype.Component;
 
@@ -32,9 +34,11 @@ public class BookingPaymentPortImpl implements PaymentPort {
 
     @Override
     public PaymentCheckoutResult requestPayment(Long bookingId, Long patronId,
-                                                 BigDecimal amount, String currency) {
+                                                 BigDecimal amount, String currency,
+                                                 PaymentProvider provider, PaymentScene scene) {
         PaymentIntentResult result = paymentApplicationService.createIntent(
-                new CreatePaymentIntentCommand(SourceType.BOOKING, bookingId, patronId, amount, currency));
-        return new PaymentCheckoutResult(result.intentId(), result.clientSecret(), result.status().name());
+                new CreatePaymentIntentCommand(SourceType.BOOKING, bookingId, patronId, amount, currency,
+                        provider, scene));
+        return new PaymentCheckoutResult(result.intentId(), result.payloadType(), result.payload(), result.status().name());
     }
 }

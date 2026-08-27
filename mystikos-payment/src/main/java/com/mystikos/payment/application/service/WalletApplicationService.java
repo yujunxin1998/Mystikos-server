@@ -2,19 +2,21 @@ package com.mystikos.payment.application.service;
 
 import com.mystikos.common.event.DomainEventPublisher;
 import com.mystikos.payment.application.command.CreatePaymentIntentCommand;
-import com.mystikos.payment.application.port.PaymentGatewayClient;
+import com.mystikos.payment.application.port.PayoutGatewayClient;
 import com.mystikos.payment.domain.PaymentException;
 import com.mystikos.payment.domain.event.PaymentCapturedEvent;
 import com.mystikos.payment.domain.model.CompanionPayoutAccount;
 import com.mystikos.payment.domain.model.LedgerDirection;
 import com.mystikos.payment.domain.model.LedgerEntry;
 import com.mystikos.payment.domain.model.PaymentIntent;
+import com.mystikos.payment.domain.model.PaymentProvider;
 import com.mystikos.payment.domain.model.SourceType;
 import com.mystikos.payment.domain.model.Wallet;
 import com.mystikos.payment.domain.model.WithdrawRequest;
 import com.mystikos.payment.domain.repository.CompanionPayoutAccountRepository;
 import com.mystikos.payment.domain.repository.LedgerEntryRepository;
 import com.mystikos.payment.domain.repository.PaymentIntentRepository;
+import com.mystikos.payment.application.port.PaymentScene;
 import com.mystikos.payment.domain.repository.WalletRepository;
 import com.mystikos.payment.domain.repository.WithdrawRequestRepository;
 import org.springframework.stereotype.Service;
@@ -36,7 +38,7 @@ public class WalletApplicationService {
     private final LedgerEntryRepository ledgerEntryRepository;
     private final WithdrawRequestRepository withdrawRequestRepository;
     private final CompanionPayoutAccountRepository companionPayoutAccountRepository;
-    private final PaymentGatewayClient gatewayClient;
+    private final PayoutGatewayClient payoutGatewayClient;
     private final PaymentApplicationService paymentApplicationService;
     private final DomainEventPublisher eventPublisher;
 
@@ -45,7 +47,7 @@ public class WalletApplicationService {
                                      LedgerEntryRepository ledgerEntryRepository,
                                      WithdrawRequestRepository withdrawRequestRepository,
                                      CompanionPayoutAccountRepository companionPayoutAccountRepository,
-                                     PaymentGatewayClient gatewayClient,
+                                     PayoutGatewayClient payoutGatewayClient,
                                      PaymentApplicationService paymentApplicationService,
                                      DomainEventPublisher eventPublisher) {
         this.walletRepository = walletRepository;
@@ -53,7 +55,7 @@ public class WalletApplicationService {
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.withdrawRequestRepository = withdrawRequestRepository;
         this.companionPayoutAccountRepository = companionPayoutAccountRepository;
-        this.gatewayClient = gatewayClient;
+        this.payoutGatewayClient = payoutGatewayClient;
         this.paymentApplicationService = paymentApplicationService;
         this.eventPublisher = eventPublisher;
     }
@@ -63,9 +65,11 @@ public class WalletApplicationService {
     }
 
     /** 用真实支付方式给自己的余额充值，sourceId 用 userId——充值没有自己的业务单据。 */
-    public PaymentIntentResult requestRecharge(Long userId, BigDecimal amount, String currency) {
+    public PaymentIntentResult requestRecharge(Long userId, BigDecimal amount, String currency,
+                                                PaymentProvider provider, PaymentScene scene) {
         return paymentApplicationService.createIntent(
-                new CreatePaymentIntentCommand(SourceType.WALLET_RECHARGE, userId, userId, amount, currency));
+                new CreatePaymentIntentCommand(SourceType.WALLET_RECHARGE, userId, userId, amount, currency,
+                        provider, scene));
     }
 
     /**
@@ -132,14 +136,14 @@ public class WalletApplicationService {
                 .orElseThrow(() -> PaymentException.withdrawRequestNotFound(withdrawId));
         CompanionPayoutAccount account = companionPayoutAccountRepository.findByUserId(request.getCompanionId())
                 .orElseThrow(PaymentException::payoutAccountNotReady);
-        if (!gatewayClient.isPayoutReady(account.getStripeConnectAccountId())) {
+        if (!payoutGatewayClient.isPayoutReady(account.getStripeConnectAccountId())) {
             throw PaymentException.payoutAccountNotReady();
         }
 
         request.approve(reviewerId);
         withdrawRequestRepository.save(request);
 
-        String transferRef = gatewayClient.transferToConnectAccount(account.getStripeConnectAccountId(),
+        String transferRef = payoutGatewayClient.transferToConnectAccount(account.getStripeConnectAccountId(),
                 request.getAmount(), request.getCurrency(), UUID.randomUUID().toString());
         request.markPaid(transferRef);
         return withdrawRequestRepository.save(request);
@@ -165,11 +169,11 @@ public class WalletApplicationService {
     public String startConnectOnboarding(Long companionId, String email, String returnUrl, String refreshUrl) {
         CompanionPayoutAccount account = companionPayoutAccountRepository.findByUserId(companionId)
                 .orElseGet(() -> {
-                    String connectAccountId = gatewayClient.createConnectAccount(email);
+                    String connectAccountId = payoutGatewayClient.createConnectAccount(email);
                     CompanionPayoutAccount created = CompanionPayoutAccount.create(companionId, connectAccountId);
                     return companionPayoutAccountRepository.save(created);
                 });
-        return gatewayClient.createConnectOnboardingLink(account.getStripeConnectAccountId(), returnUrl, refreshUrl);
+        return payoutGatewayClient.createConnectOnboardingLink(account.getStripeConnectAccountId(), returnUrl, refreshUrl);
     }
 
     /**

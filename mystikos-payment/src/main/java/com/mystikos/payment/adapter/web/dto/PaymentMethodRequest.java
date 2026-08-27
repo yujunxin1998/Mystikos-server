@@ -3,25 +3,16 @@ package com.mystikos.payment.adapter.web.dto;
 import com.mystikos.payment.application.port.PaymentScene;
 import com.mystikos.payment.domain.model.PaymentProvider;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.math.BigDecimal;
-
+/**
+ * 结账/充值接口共用的支付方式选择请求体。commerce/booking 各自的结账接口和这里的
+ * 钱包充值接口都直接复用这一个类型，不各自重复定义。
+ */
 @Data
-@Schema(description = "钱包充值请求")
-public class RechargeRequest {
-
-    @NotNull
-    @DecimalMin(value = "0.01", message = "充值金额必须大于 0")
-    @Schema(description = "充值金额")
-    private BigDecimal amount;
-
-    @NotBlank
-    @Schema(description = "ISO 4217 币种代码，如 EUR/CNY；选支付宝/微信时必须传 CNY")
-    private String currency;
+@Schema(description = "支付方式选择")
+public class PaymentMethodRequest {
 
     @NotNull
     @Schema(description = "支付渠道")

@@ -23,6 +23,8 @@ import com.mystikos.commerce.domain.repository.ProductRepository;
 import com.mystikos.commerce.domain.repository.WishlistItemRepository;
 import com.mystikos.common.event.DomainEventPublisher;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.payment.application.port.PaymentScene;
+import com.mystikos.payment.domain.model.PaymentProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -186,15 +188,19 @@ public class CommerceApplicationService {
         releaseInventory(order);
     }
 
-    /** 发起结账：把订单转 PENDING_PAYMENT，返回前端完成支付所需的 clientSecret。 */
+    /**
+     * 发起结账：把订单转 PENDING_PAYMENT，返回前端完成支付所需的 payload。
+     * 结算币种固定欧元（见类注释），选支付宝/微信时网关会因为币种不是 CNY 直接拒绝——
+     * 在给这两个订单类型接入人民币定价之前，这是预期内的限制，不是 bug。
+     */
     @Transactional
-    public PaymentCheckoutResult requestPayment(Long orderId, Long patronId) {
+    public PaymentCheckoutResult requestPayment(Long orderId, Long patronId, PaymentProvider provider, PaymentScene scene) {
         MerchandiseOrder order = requireOrder(orderId);
         if (!order.getPatronId().equals(patronId)) {
             throw CommerceException.orderNotFound(orderId);
         }
         PaymentCheckoutResult checkout = paymentPort.requestPayment(
-                order.getId(), order.getPatronId(), order.getTotalAmount(), DEFAULT_CURRENCY);
+                order.getId(), order.getPatronId(), order.getTotalAmount(), DEFAULT_CURRENCY, provider, scene);
         // 重复调用本接口时 PaymentPort 会复用同一个未终态 intent，订单这边也只在还是 DRAFT 时迁移一次。
         if (order.getStatus() == OrderStatus.DRAFT) {
             order.requestPayment();

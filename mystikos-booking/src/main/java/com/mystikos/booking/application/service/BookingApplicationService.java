@@ -13,6 +13,8 @@ import com.mystikos.booking.domain.model.TimeRange;
 import com.mystikos.booking.domain.repository.BookingRepository;
 import com.mystikos.common.event.DomainEventPublisher;
 import com.mystikos.common.result.PageResult;
+import com.mystikos.payment.application.port.PaymentScene;
+import com.mystikos.payment.domain.model.PaymentProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -76,15 +78,19 @@ public class BookingApplicationService {
         return saved.getId();
     }
 
-    /** 发起结账：把预约订单转 PENDING_PAYMENT，返回前端完成支付所需的 clientSecret。 */
+    /**
+     * 发起结账：把预约订单转 PENDING_PAYMENT，返回前端完成支付所需的 payload。
+     * 结算币种固定欧元（见类注释），选支付宝/微信时网关会因为币种不是 CNY 直接拒绝——
+     * 在给预约订单接入人民币定价之前，这是预期内的限制，不是 bug。
+     */
     @Transactional
-    public PaymentCheckoutResult requestPayment(Long bookingId, Long patronId) {
+    public PaymentCheckoutResult requestPayment(Long bookingId, Long patronId, PaymentProvider provider, PaymentScene scene) {
         BookingOrder order = loadOwnedAndSyncExpiry(bookingId, patronId);
         if (order.getStatus() == BookingStatus.EXPIRED) {
             throw BookingException.expired(bookingId);
         }
         PaymentCheckoutResult checkout = paymentPort.requestPayment(
-                order.getId(), order.getPatronId(), order.getPriceSnapshot(), DEFAULT_CURRENCY);
+                order.getId(), order.getPatronId(), order.getPriceSnapshot(), DEFAULT_CURRENCY, provider, scene);
         // 重复调用本接口时 PaymentPort 会复用同一个未终态 intent，订单这边也只在还是 DRAFT 时迁移一次。
         if (order.getStatus() == BookingStatus.DRAFT) {
             order.requestPayment();

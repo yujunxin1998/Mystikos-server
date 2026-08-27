@@ -50,9 +50,10 @@ public class WalletController {
     }
 
     @PostMapping("/recharge")
-    @Operation(summary = "发起充值", description = "返回 clientSecret，前端用 Stripe.js/Payment Element 完成支付")
+    @Operation(summary = "发起充值", description = "返回前端完成支付所需的 payload，具体形状见 payloadType")
     public APIResponse<PaymentCheckoutResponse> recharge(@Valid @RequestBody RechargeRequest request) {
-        var result = walletApplicationService.requestRecharge(currentUserId(), request.getAmount(), request.getCurrency());
+        var result = walletApplicationService.requestRecharge(currentUserId(), request.getAmount(), request.getCurrency(),
+                request.getProvider(), request.getScene());
         return APIResponse.ok(PaymentCheckoutResponse.from(result));
     }
 

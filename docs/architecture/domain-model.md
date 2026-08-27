@@ -118,15 +118,15 @@ Booking（服务订单）与 Commerce（商品订单）**不合并为通用 Orde
 - 目前只订阅 `GiftSent` 累加进度 → 事件：`IntimacyStageChanged`（已实现）；`BookingCompleted` 那一路接不上，因为 `BookingApplicationService` 目前只实现了 `createBooking`，没有任何用例真正推进到 `COMPLETED` 并发事件
 - 只对外暴露只读查询接口 `GET /api/v1/relationships/{patronId}/{companionId}`——Commerce 经 Port 查询 Relationship 做"传奇搭档限定商品"准入校验这条**本轮未接**（讨论后决定 Commerce 先不做推荐关联/准入规则，见 [PRD 对照](prd-alignment.md#3-真实缺口不是不必要是目前域模型漏掉的)）
 
-### Payment & Ledger（支付账本，被 Booking / Commerce / Gifting 共用，**已实现，接入 Stripe**）
-- `PaymentIntent`(id, sourceType: BOOKING\|MERCHANDISE\|GIFT\|WALLET_RECHARGE, sourceId, patronId, amount, currency, status: `CREATED → REQUIRES_ACTION → CAPTURED` \| `FAILED` \| `REFUNDED`, gatewayProvider, gatewayRef, clientSecret, idempotencyKey)
+### Payment & Ledger（支付账本，被 Booking / Commerce / Gifting 共用，**已实现，Stripe + 支付宝 + 微信支付三网关**）
+- `PaymentIntent`(id, sourceType: BOOKING\|MERCHANDISE\|GIFT\|WALLET_RECHARGE, sourceId, patronId, amount, currency, status: `CREATED → REQUIRES_ACTION → CAPTURED` \| `FAILED` \| `REFUNDED`, gatewayProvider, gatewayRef, payloadType, payload, idempotencyKey)。`payloadType`/`payload`（`Map<String,String>`）取代了早期单一的 `clientSecret` 字段——Stripe 是 CLIENT_SECRET，支付宝/微信按下单场景（PC 扫码/手机 H5/App 调起）还有 QR_CODE/REDIRECT_URL/APP_INVOKE_PARAMS 三种形状，见 `GatewayIntentResult`
 - `LedgerEntry`（不可变账本行，append-only：intentId, walletId, direction: DEBIT\|CREDIT, amount, currency, occurredAt）
-- `Wallet`(userId, balance, currency)：用户在平台内的记账余额，不是托管资金的持牌电子钱包，真实资金全程留在 Stripe 平台余额里。Booking/Commerce 走一次性 `PaymentIntent`（网关异步回调）；钱包充值也走 `PaymentIntent`（sourceType=WALLET_RECHARGE），到账后credit余额；礼物打赏改为从余额同步扣款（sourceType=GIFT，内部转账，`gatewayProvider="INTERNAL_WALLET"`，创建即 CAPTURED，不经外部网关往返），扣款失败不产生 `GiftTransaction`
-- `WithdrawRequest`(companionId, amount, status: `PENDING_REVIEW → APPROVED → PAID` \| `REJECTED`)：陪玩提现，申请即冻结余额，人工审批通过后调 Stripe Connect Transfer 打款，驳回退回余额；`CompanionPayoutAccount`(userId, stripeConnectAccountId) 是陪玩收款账户与 Stripe Connect 账户的映射
+- `Wallet`(userId, balance, currency)：用户在平台内的记账余额，不是托管资金的持牌电子钱包。Booking/Commerce 走一次性 `PaymentIntent`（网关异步回调）；钱包充值也走 `PaymentIntent`（sourceType=WALLET_RECHARGE），到账后credit余额；礼物打赏改为从余额同步扣款（sourceType=GIFT，内部转账，`gatewayProvider="INTERNAL_WALLET"`，创建即 CAPTURED，不经外部网关往返），扣款失败不产生 `GiftTransaction`
+- `WithdrawRequest`(companionId, amount, status: `PENDING_REVIEW → APPROVED → PAID` \| `REJECTED`)：陪玩提现，申请即冻结余额，人工审批通过后调 Stripe Connect Transfer 打款，驳回退回余额；`CompanionPayoutAccount`(userId, stripeConnectAccountId) 是陪玩收款账户与 Stripe Connect 账户的映射。支付宝/微信没有对等的打款账户体系，陪玩提现继续只走 Stripe Connect，不是遗漏
 - 事件：`PaymentCaptured`（Membership 订阅它累计消费，故意排除 WALLET_RECHARGE 避免和 GIFT 重复计算）、`PaymentRefunded`
 - 通过 `sourceType` + `sourceId` 回指业务订单，不持有业务细节，避免与 Booking/Commerce 耦合
-- 网关抽象为 `PaymentGatewayClient` 接口（`mystikos-payment` 的 `application/port`），当前唯一实现是 Stripe；新增网关只需要新实现这一个接口
-- **本轮明确未做**：陪玩收益抽成比例（赠礼全额转给陪玩）、身份证实名/未成年人标记同步给 Payment 做充值/赠礼限额拦截、Wallet 多币种换汇（目前每个 Wallet 假设单一结算币种，Booking/Commerce/Gifting 暂时固定用 EUR 结算）
+- 网关抽象拆成两个接口：`PaymentGatewayClient`（收款下单/webhook/退款，Stripe/支付宝/微信支付三个实现，按需注册）+ `PayoutGatewayClient`（陪玩提现打款，只有 Stripe 实现）；`PaymentGatewayRegistry` 按调用方传入的 `PaymentProvider` 路由到具体实现，找不到时抛"网关未配置"（每个实现各自按自己的配置项是否齐全决定要不要注册，0~3 个网关同时注册都合法）
+- **本轮明确未做**：陪玩收益抽成比例（赠礼全额转给陪玩）、身份证实名/未成年人标记同步给 Payment 做充值/赠礼限额拦截、Wallet 多币种换汇（目前每个 Wallet 假设单一结算币种，Booking/Commerce/Gifting 暂时固定用 EUR 结算——这也意味着这三个订单类型选支付宝/微信时会被网关直接拒绝，因为这两家只认 CNY；小程序/公众号 JSAPI 支付场景）
 
 ### Leaderboard & Stats（排行榜，纯读侧，无写聚合，**已实现**）
 - `CompanionCharmStat`(companionId, charmValue)、`PatronGuardStat`(patronId, guardValue)——累计值落库，**排名实时计算**（查询时 `ORDER BY ... LIMIT`），不是原型文案"每周一更新"的冻结快照；要做真正的周榜需要另加 `@Scheduled` 定时任务重算快照，本轮先做实时版本

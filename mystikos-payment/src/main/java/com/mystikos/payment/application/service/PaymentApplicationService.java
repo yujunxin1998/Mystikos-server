@@ -6,12 +6,14 @@ import com.mystikos.payment.application.port.GatewayEventType;
 import com.mystikos.payment.application.port.GatewayIntentResult;
 import com.mystikos.payment.application.port.GatewayWebhookEvent;
 import com.mystikos.payment.application.port.PaymentGatewayClient;
+import com.mystikos.payment.application.port.WebhookNotification;
 import com.mystikos.payment.domain.PaymentException;
 import com.mystikos.payment.domain.event.PaymentCapturedEvent;
 import com.mystikos.payment.domain.event.PaymentRefundedEvent;
 import com.mystikos.payment.domain.model.LedgerDirection;
 import com.mystikos.payment.domain.model.LedgerEntry;
 import com.mystikos.payment.domain.model.PaymentIntent;
+import com.mystikos.payment.domain.model.PaymentProvider;
 import com.mystikos.payment.domain.model.PaymentStatus;
 import com.mystikos.payment.domain.repository.LedgerEntryRepository;
 import com.mystikos.payment.domain.repository.PaymentIntentRepository;
@@ -30,22 +32,26 @@ public class PaymentApplicationService {
 
     private final PaymentIntentRepository paymentIntentRepository;
     private final LedgerEntryRepository ledgerEntryRepository;
-    private final PaymentGatewayClient gatewayClient;
+    private final PaymentGatewayRegistry gatewayRegistry;
     private final DomainEventPublisher eventPublisher;
 
     public PaymentApplicationService(PaymentIntentRepository paymentIntentRepository,
                                       LedgerEntryRepository ledgerEntryRepository,
-                                      PaymentGatewayClient gatewayClient,
+                                      PaymentGatewayRegistry gatewayRegistry,
                                       DomainEventPublisher eventPublisher) {
         this.paymentIntentRepository = paymentIntentRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
-        this.gatewayClient = gatewayClient;
+        this.gatewayRegistry = gatewayRegistry;
         this.eventPublisher = eventPublisher;
     }
 
     /**
      * 按 (sourceType, sourceId) 先找是否已有未终态的意图并直接复用——同一笔订单被
      * 重复点击"去支付"不会在网关那边建出两笔单子，调用方不需要自己传幂等键。
+     *
+     * <p>复用已有意图时不会重新调用网关——如果调用方这次换了 provider/scene（比如上次选支付宝
+     * 扫码这次想换微信 H5），会拿到第一次建单时的旧 provider 结果，调用方要自己决定要不要
+     * 先把旧意图作废。这次不做"换渠道重新建单"，按现有场景（同一订单结账一般不会中途换渠道）够用。
      */
     @Transactional
     public PaymentIntentResult createIntent(CreatePaymentIntentCommand command) {
@@ -53,6 +59,8 @@ public class PaymentApplicationService {
         if (existing.isPresent()) {
             return PaymentIntentResult.from(existing.get());
         }
+
+        PaymentGatewayClient gatewayClient = gatewayRegistry.get(command.provider());
 
         PaymentIntent intent = PaymentIntent.createPending(command.sourceType(), command.sourceId(),
                 command.patronId(), command.amount(), command.currency(), UUID.randomUUID().toString());
@@ -63,16 +71,19 @@ public class PaymentApplicationService {
                 Map.of(
                         "sourceType", saved.getSourceType().name(),
                         "sourceId", String.valueOf(saved.getSourceId()),
-                        "intentId", String.valueOf(saved.getId())));
+                        "intentId", String.valueOf(saved.getId())),
+                command.scene());
 
-        saved.markRequiresAction(gatewayClient.providerCode(), gatewayResult.gatewayRef(), gatewayResult.clientSecret());
+        saved.markRequiresAction(gatewayClient.providerCode(), gatewayResult.gatewayRef(),
+                gatewayResult.payloadType(), gatewayResult.payload());
         PaymentIntent updated = paymentIntentRepository.save(saved);
         return PaymentIntentResult.from(updated);
     }
 
     @Transactional
-    public void handleStripeWebhook(String rawPayload, String signatureHeader) {
-        GatewayWebhookEvent event = gatewayClient.parseWebhookEvent(rawPayload, signatureHeader);
+    public void handleWebhook(PaymentProvider provider, WebhookNotification notification) {
+        PaymentGatewayClient gatewayClient = gatewayRegistry.get(provider);
+        GatewayWebhookEvent event = gatewayClient.parseWebhookEvent(notification);
         if (event.type() == GatewayEventType.IGNORED) {
             return;
         }
@@ -110,6 +121,7 @@ public class PaymentApplicationService {
     public void refund(Long intentId, String reason) {
         PaymentIntent intent = paymentIntentRepository.findById(intentId)
                 .orElseThrow(() -> PaymentException.notFound(intentId));
+        PaymentGatewayClient gatewayClient = gatewayRegistry.get(providerOf(intent));
         gatewayClient.refund(intent.getGatewayRef(), intent.getAmount());
         intent.markRefunded();
         paymentIntentRepository.save(intent);
@@ -134,5 +146,14 @@ public class PaymentApplicationService {
                 LedgerDirection.CREDIT, intent.getAmount(), intent.getCurrency()));
         eventPublisher.publish(new PaymentCapturedEvent(intent.getId(), intent.getSourceType(),
                 intent.getSourceId(), intent.getPatronId(), intent.getAmount(), intent.getCurrency()));
+    }
+
+    private PaymentProvider providerOf(PaymentIntent intent) {
+        for (PaymentProvider provider : PaymentProvider.values()) {
+            if (provider.code().equals(intent.getGatewayProvider())) {
+                return provider;
+            }
+        }
+        throw PaymentException.gatewayNotConfigured();
     }
 }

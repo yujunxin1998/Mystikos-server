@@ -140,5 +140,28 @@ mystikos:
       secret-key: ${STRIPE_SECRET_KEY:}
       webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
       # alipay/wechat_pay 需要 Stripe 账户单独开通、且结算币种在 Stripe 支持列表内（不是所有欧洲本币都支持），
-      # 没有额外开通之前不要加进去，Stripe 会直接拒绝建单请求。
+      # 没有额外开通之前不要加进去，Stripe 会直接拒绝建单请求。这是 Stripe 自己的跨境本地支付方式接入，
+      # 跟下面境内直连的 alipay/wechat 网关是两码事，互不影响。
       payment-method-types: ${STRIPE_PAYMENT_METHOD_TYPES:card}
+    # 支付宝开放平台直连（境内独立商户号，公钥模式）。app-id 留空时 AlipayGatewayClient 不会注册，
+    # 调支付宝相关接口返回"支付网关未配置"。去 https://open.alipay.com 创建应用、生成 RSA2 密钥对，
+    # 应用私钥填 merchant-private-key，支付宝公钥（不是应用公钥）填 alipay-public-key，
+    # 都是不带 PEM 头尾的纯 Base64 内容，不要把真实密钥提交进仓库。notify-url 必须是公网可达的 HTTPS 地址。
+    alipay:
+      app-id: ${ALIPAY_APP_ID:}
+      merchant-private-key: ${ALIPAY_MERCHANT_PRIVATE_KEY:}
+      alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
+      notify-url: ${ALIPAY_NOTIFY_URL:}
+      gateway-url: ${ALIPAY_GATEWAY_URL:https://openapi.alipay.com/gateway.do}
+    # 微信支付商户平台直连（境内独立商户号，APIv3）。mch-id 留空时 WechatPayGatewayClient 不会注册。
+    # 去 https://pay.weixin.qq.com 商户平台开通 APIv3，下载 apiclient_key.pem 挂载到容器内，
+    # merchant-private-key-path 指向这个文件路径（支持 classpath: 前缀），merchant-serial-no 是商户 API 证书
+    # 序列号，api-v3-key 是商户平台单独设置的 APIv3 密钥（不是证书密码）。平台证书由 SDK 自动下载轮换，
+    # 不需要手动维护。notify-url 必须是公网可达的 HTTPS 地址。
+    wechat:
+      mch-id: ${WECHAT_MCH_ID:}
+      app-id: ${WECHAT_APP_ID:}
+      merchant-serial-no: ${WECHAT_MERCHANT_SERIAL_NO:}
+      merchant-private-key-path: ${WECHAT_MERCHANT_PRIVATE_KEY_PATH:}
+      api-v3-key: ${WECHAT_API_V3_KEY:}
+      notify-url: ${WECHAT_NOTIFY_URL:}

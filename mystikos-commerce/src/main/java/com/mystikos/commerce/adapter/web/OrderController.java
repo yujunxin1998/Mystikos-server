@@ -7,6 +7,7 @@ import com.mystikos.commerce.application.command.CreateOrderCommand;
 import com.mystikos.commerce.application.service.CommerceApplicationService;
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.security.CurrentUserContext;
+import com.mystikos.payment.adapter.web.dto.PaymentMethodRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -50,10 +51,12 @@ public class OrderController {
     }
 
     @PostMapping("/{orderId}/payment")
-    @Operation(summary = "发起结账", description = "把订单转 PENDING_PAYMENT，返回前端用 Stripe.js 完成支付所需的 clientSecret")
-    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "订单ID") @PathVariable Long orderId) {
+    @Operation(summary = "发起结账", description = "把订单转 PENDING_PAYMENT，返回前端完成支付所需的 payload；"
+            + "选支付宝/微信时注意结算币种固定欧元，非 CNY 网关会直接拒绝")
+    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "订单ID") @PathVariable Long orderId,
+                                                                @Valid @RequestBody PaymentMethodRequest request) {
         return APIResponse.ok(PaymentCheckoutResponse.from(
-                commerceApplicationService.requestPayment(orderId, currentPatronId())));
+                commerceApplicationService.requestPayment(orderId, currentPatronId(), request.getProvider(), request.getScene())));
     }
 
     @PostMapping("/{orderId}/cancel")

@@ -47,8 +47,12 @@ public class PaymentIntentPO implements Serializable {
     @TableField("gateway_ref")
     private String gatewayRef;
 
-    @TableField("client_secret")
-    private String clientSecret;
+    @TableField("payload_type")
+    private String payloadType;
+
+    /** 序列化后的 Map&lt;String,String&gt;，见 {@link PaymentIntentRepositoryImpl} 里的转换。 */
+    @TableField("payload")
+    private String payload;
 
     @TableField("idempotency_key")
     private String idempotencyKey;

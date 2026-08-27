@@ -12,7 +12,8 @@
     <artifactId>mystikos-payment</artifactId>
     <packaging>jar</packaging>
 
-    <!-- 支付账本限界上下文：PaymentIntent/LedgerEntry/Wallet/WithdrawRequest，Stripe 作为网关实现。 -->
+    <!-- 支付账本限界上下文：PaymentIntent/LedgerEntry/Wallet/WithdrawRequest，
+         Stripe/支付宝/微信支付作为网关实现，见 PaymentGatewayRegistry。 -->
 
     <dependencies>
         <dependency>
@@ -52,6 +53,16 @@
         <dependency>
             <groupId>com.stripe</groupId>
             <artifactId>stripe-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alipay.sdk</groupId>
+            <artifactId>alipay-sdk-java</artifactId>
+            <version>4.40.272.ALL</version>
+        </dependency>
+        <dependency>
+            <groupId>com.github.wechatpay-apiv3</groupId>
+            <artifactId>wechatpay-java</artifactId>
+            <version>0.2.17</version>
         </dependency>
     </dependencies>
 </project>

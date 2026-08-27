@@ -4,6 +4,9 @@ import com.mystikos.payment.application.port.GatewayEventType;
 import com.mystikos.payment.application.port.GatewayIntentResult;
 import com.mystikos.payment.application.port.GatewayWebhookEvent;
 import com.mystikos.payment.application.port.PaymentGatewayClient;
+import com.mystikos.payment.application.port.PaymentScene;
+import com.mystikos.payment.application.port.PayoutGatewayClient;
+import com.mystikos.payment.application.port.WebhookNotification;
 import com.mystikos.payment.domain.PaymentException;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
@@ -42,12 +45,15 @@ import java.util.Optional;
  *
  * <p>只在配置了 secret-key 时注册这个 Bean，照
  * {@code com.mystikos.identity.infrastructure.acl.DiscordOAuthClient} 的写法——
- * 本地没配 Stripe key 时不注册，走 {@link UnconfiguredPaymentGatewayClient} 兜底，
- * 而不是启动失败或拿空 key 去调 Stripe API 换一个更难懂的错误。
+ * 本地没配 Stripe key 时不注册，{@link com.mystikos.payment.application.service.PaymentGatewayRegistry}
+ * 找不到 "stripe" 这个 providerCode 就会抛"网关未配置"，而不是启动失败或拿空 key 去调
+ * Stripe API 换一个更难懂的错误。同时是目前唯一实现 {@link PayoutGatewayClient} 的网关——
+ * 陪玩提现打款继续走 Stripe Connect，本地没配 secret-key 时提现相关调用见
+ * {@link UnconfiguredPayoutGatewayClient}。
  */
 @Component
 @ConditionalOnExpression("!'${mystikos.payment.stripe.secret-key:}'.isEmpty()")
-public class StripeGatewayClient implements PaymentGatewayClient {
+public class StripeGatewayClient implements PaymentGatewayClient, PayoutGatewayClient {
 
     private static final Logger log = LoggerFactory.getLogger(StripeGatewayClient.class);
 
@@ -78,9 +84,10 @@ public class StripeGatewayClient implements PaymentGatewayClient {
         return "stripe";
     }
 
+    /** scene 对 Stripe 没有意义（不区分场景，一律走 Payment Element/Stripe.js），忽略即可。 */
     @Override
     public GatewayIntentResult createIntent(String idempotencyKey, BigDecimal amount, String currency,
-                                             Map<String, String> metadata) {
+                                             Map<String, String> metadata, PaymentScene scene) {
         long minorUnits = StripeAmountConverter.toMinorUnits(amount, currency);
         PaymentIntentCreateParams.Builder builder = PaymentIntentCreateParams.builder()
                 .setAmount(minorUnits)
@@ -90,7 +97,7 @@ public class StripeGatewayClient implements PaymentGatewayClient {
 
         try {
             PaymentIntent intent = PaymentIntent.create(builder.build(), requestOptions(idempotencyKey));
-            return new GatewayIntentResult(intent.getId(), intent.getClientSecret());
+            return GatewayIntentResult.clientSecret(intent.getId(), intent.getClientSecret());
         } catch (StripeException e) {
             log.warn("Stripe 建单失败：{}", e.getMessage());
             throw PaymentException.gatewayError(e.getMessage());
@@ -98,10 +105,11 @@ public class StripeGatewayClient implements PaymentGatewayClient {
     }
 
     @Override
-    public GatewayWebhookEvent parseWebhookEvent(String rawPayload, String signatureHeader) {
+    public GatewayWebhookEvent parseWebhookEvent(WebhookNotification notification) {
+        String signatureHeader = notification.headers().get("Stripe-Signature");
         Event event;
         try {
-            event = Webhook.constructEvent(rawPayload, signatureHeader, webhookSecret);
+            event = Webhook.constructEvent(notification.rawBody(), signatureHeader, webhookSecret);
         } catch (SignatureVerificationException e) {
             log.warn("Stripe webhook 验签失败：{}", e.getMessage());
             throw PaymentException.webhookSignatureInvalid();

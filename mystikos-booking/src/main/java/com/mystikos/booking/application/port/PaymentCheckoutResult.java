@@ -1,4 +1,9 @@
 package com.mystikos.booking.application.port;
 
-public record PaymentCheckoutResult(Long intentId, String clientSecret, String status) {
+import com.mystikos.payment.application.port.PaymentPayloadType;
+
+import java.util.Map;
+
+public record PaymentCheckoutResult(Long intentId, PaymentPayloadType payloadType, Map<String, String> payload,
+                                     String status) {
 }

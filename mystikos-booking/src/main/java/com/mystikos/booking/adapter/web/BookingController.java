@@ -8,6 +8,7 @@ import com.mystikos.booking.application.service.BookingOrderView;
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.result.PageResult;
 import com.mystikos.common.security.CurrentUserContext;
+import com.mystikos.payment.adapter.web.dto.PaymentMethodRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -63,11 +64,13 @@ public class BookingController {
     }
 
     @PostMapping("/{id}/payment")
-    @Operation(summary = "发起结账", description = "把预约订单转 PENDING_PAYMENT，返回前端用 Stripe.js 完成支付所需的 clientSecret；"
-            + "订单已失效时返回错误")
-    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "预约订单ID") @PathVariable Long id) {
+    @Operation(summary = "发起结账", description = "把预约订单转 PENDING_PAYMENT，返回前端完成支付所需的 payload；"
+            + "订单已失效时返回错误；选支付宝/微信时注意结算币种固定欧元，非 CNY 网关会直接拒绝")
+    public APIResponse<PaymentCheckoutResponse> requestPayment(@Parameter(description = "预约订单ID") @PathVariable Long id,
+                                                                @Valid @RequestBody PaymentMethodRequest request) {
         Long patronId = Long.valueOf(CurrentUserContext.get().userId());
-        return APIResponse.ok(PaymentCheckoutResponse.from(bookingApplicationService.requestPayment(id, patronId)));
+        return APIResponse.ok(PaymentCheckoutResponse.from(
+                bookingApplicationService.requestPayment(id, patronId, request.getProvider(), request.getScene())));
     }
 
     @PostMapping("/{id}/cancel")

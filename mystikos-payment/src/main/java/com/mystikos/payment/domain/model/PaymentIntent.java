@@ -1,18 +1,24 @@
 package com.mystikos.payment.domain.model;
 
+import com.mystikos.payment.application.port.PaymentPayloadType;
 import com.mystikos.payment.domain.PaymentException;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Map;
 
 /**
- * 支付意图聚合根。被 Booking/Commerce/Gifting/Wallet 共用，通过 sourceType + sourceId
+ * 支付意图聚合根。被 Booking/Commerce/Gifting 各自的 PaymentPort 共用，通过 sourceType + sourceId
  * 回指业务订单，不持有业务细节。状态迁移全部收在聚合内部，照 BookingOrder 的
  * transition(expected, next) 收口模式，防止调用方绕过状态机。
  *
  * <p>gatewayProvider="INTERNAL_WALLET" 的记录代表钱包内部转账（礼物扣款），
  * 没有真正调用外部网关，创建时直接是 CAPTURED——保证"每一笔资金移动都有
  * PaymentIntent+LedgerEntry"这条不变量对内部转账也成立，不是只有外部支付才记账。
+ *
+ * <p>payloadType/payload 取代原来单一的 clientSecret 字段——Stripe 是 clientSecret，
+ * 支付宝/微信按场景不同还有跳转链接/二维码/App 调起参数，形状不一样，
+ * 见 {@link com.mystikos.payment.application.port.GatewayIntentResult}。
  */
 public class PaymentIntent {
 
@@ -25,7 +31,8 @@ public class PaymentIntent {
     private PaymentStatus status;
     private String gatewayProvider;
     private String gatewayRef;
-    private String clientSecret;
+    private PaymentPayloadType payloadType;
+    private Map<String, String> payload;
     private final String idempotencyKey;
     private String failureReason;
     private final OffsetDateTime createdAt;
@@ -33,7 +40,8 @@ public class PaymentIntent {
 
     private PaymentIntent(Long id, SourceType sourceType, Long sourceId, Long patronId,
                            BigDecimal amount, String currency, PaymentStatus status,
-                           String gatewayProvider, String gatewayRef, String clientSecret,
+                           String gatewayProvider, String gatewayRef,
+                           PaymentPayloadType payloadType, Map<String, String> payload,
                            String idempotencyKey, String failureReason,
                            OffsetDateTime createdAt, OffsetDateTime updatedAt) {
         this.id = id;
@@ -45,7 +53,8 @@ public class PaymentIntent {
         this.status = status;
         this.gatewayProvider = gatewayProvider;
         this.gatewayRef = gatewayRef;
-        this.clientSecret = clientSecret;
+        this.payloadType = payloadType;
+        this.payload = payload == null ? Map.of() : payload;
         this.idempotencyKey = idempotencyKey;
         this.failureReason = failureReason;
         this.createdAt = createdAt;
@@ -57,7 +66,7 @@ public class PaymentIntent {
                                                BigDecimal amount, String currency, String idempotencyKey) {
         OffsetDateTime now = OffsetDateTime.now();
         return new PaymentIntent(null, sourceType, sourceId, patronId, amount, currency,
-                PaymentStatus.CREATED, null, null, null, idempotencyKey, null, now, now);
+                PaymentStatus.CREATED, null, null, null, null, idempotencyKey, null, now, now);
     }
 
     /** 创建一笔内部钱包扣款记录，创建即完成（没有外部网关往返）。 */
@@ -65,25 +74,28 @@ public class PaymentIntent {
                                                          BigDecimal amount, String currency, String idempotencyKey) {
         OffsetDateTime now = OffsetDateTime.now();
         return new PaymentIntent(null, sourceType, sourceId, patronId, amount, currency,
-                PaymentStatus.CAPTURED, "INTERNAL_WALLET", idempotencyKey, null, idempotencyKey, null, now, now);
+                PaymentStatus.CAPTURED, "INTERNAL_WALLET", idempotencyKey, null, null, idempotencyKey, null, now, now);
     }
 
     /** 从持久化数据重建聚合，仅供仓储实现调用。 */
     public static PaymentIntent restore(Long id, SourceType sourceType, Long sourceId, Long patronId,
                                          BigDecimal amount, String currency, PaymentStatus status,
-                                         String gatewayProvider, String gatewayRef, String clientSecret,
+                                         String gatewayProvider, String gatewayRef,
+                                         PaymentPayloadType payloadType, Map<String, String> payload,
                                          String idempotencyKey, String failureReason,
                                          OffsetDateTime createdAt, OffsetDateTime updatedAt) {
         return new PaymentIntent(id, sourceType, sourceId, patronId, amount, currency, status,
-                gatewayProvider, gatewayRef, clientSecret, idempotencyKey, failureReason, createdAt, updatedAt);
+                gatewayProvider, gatewayRef, payloadType, payload, idempotencyKey, failureReason, createdAt, updatedAt);
     }
 
-    /** 网关已建单，记下 gatewayRef/clientSecret，转 REQUIRES_ACTION 等待用户在前端完成支付。 */
-    public void markRequiresAction(String gatewayProvider, String gatewayRef, String clientSecret) {
+    /** 网关已建单，记下 gatewayRef/payload，转 REQUIRES_ACTION 等待用户在前端完成支付。 */
+    public void markRequiresAction(String gatewayProvider, String gatewayRef,
+                                    PaymentPayloadType payloadType, Map<String, String> payload) {
         transition(PaymentStatus.CREATED, PaymentStatus.REQUIRES_ACTION);
         this.gatewayProvider = gatewayProvider;
         this.gatewayRef = gatewayRef;
-        this.clientSecret = clientSecret;
+        this.payloadType = payloadType;
+        this.payload = payload == null ? Map.of() : payload;
     }
 
     public void markCaptured() {
@@ -155,8 +167,12 @@ public class PaymentIntent {
         return gatewayRef;
     }
 
-    public String getClientSecret() {
-        return clientSecret;
+    public PaymentPayloadType getPayloadType() {
+        return payloadType;
+    }
+
+    public Map<String, String> getPayload() {
+        return payload;
     }
 
     public String getIdempotencyKey() {

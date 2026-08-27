@@ -13,7 +13,7 @@
 | S3 排行榜与等级 | 陪玩榜/老板榜、贵宾等级升降级 | `mystikos-leaderboard` + `mystikos-membership` | **已实现**。PRD 当成一个服务，我们拆成两个限界上下文——**不是重复**，是更细的 DDD 边界，两者仍在同一个部署单元（`mystikos-app`）里，粒度不同不影响一起发布。排行榜实时计算（不是 PRD 暗示的"每周一更新"冻结快照）；会员等级梯度是占位值 |
 | S4 亲密度与礼物成就 | 互动/赠礼记录、亲密度计算、成就解锁 | `mystikos-relationship` + `mystikos-gifting` | **已实现**。同 S3，PRD 一个服务对应我们两个上下文，理由同上。成就解锁只做了 `CUMULATIVE_COUNT`/`CUMULATIVE_SPEND` 两种规则的自动评估，`LEADERBOARD_RANK`/`INTIMACY_STAGE`/`CONSECUTIVE_DAYS` 会形成循环模块依赖，暂不评估，见 [领域模型](domain-model.md) |
 | S5 商城与订单 | 商品、陪玩推荐关联、购物车、订单、库存 | `mystikos-commerce` | **已实现，但推荐关联工作流本轮未做**；`companion_product_endorsement`（陪玩需确认授权才能被关联推荐）是我们域模型目前没写清楚的细节，见第 3 节 |
-| S6 支付与钱包 | 微信/支付宝下单回调、平台钱包、赠礼扣款、陪玩提现 | `mystikos-payment` | **已实现**：接入 Stripe（微信支付/支付宝作为 Stripe 的 `payment_method_type` 可选开通，不是单独接境外商户 SDK），补上了 `Wallet`/`WithdrawRequest`，赠礼走钱包扣款，陪玩提现走 Stripe Connect Transfer。陪玩收益抽成比例、身份证实名/未成年人标记限额拦截仍未做，见第 3 节 |
+| S6 支付与钱包 | 微信/支付宝下单回调、平台钱包、赠礼扣款、陪玩提现 | `mystikos-payment` | **已实现**：Stripe + 支付宝开放平台/微信支付商户号三家网关直连（`PaymentGatewayRegistry` 按 provider 路由，不再是"改配置切换 payment_method_type"那种间接接入），补上了 `Wallet`/`WithdrawRequest`，赠礼走钱包扣款，陪玩提现继续走 Stripe Connect Transfer（支付宝/微信没有对等打款能力，这次不做）。陪玩收益抽成比例、身份证实名/未成年人标记限额拦截仍未做，见第 3 节 |
 | S7 内容审核与风控 | 内容审核、异常消费/刷榜检测、黑白名单 | `mystikos-trust-safety` | 吻合；刷榜检测要能给 `mystikos-leaderboard` 降权信号，是跨上下文事件，不是新模块 |
 | S8 消息通知 | 站内信、短信、Push | `mystikos-notification` | 吻合 |
 | S9 运营管理后台 | 陪玩审核、商品上下架、榜单干预、风控工单、数据看板 | **没有对应的独立限界上下文，也不该有** | 见第 2 节 |

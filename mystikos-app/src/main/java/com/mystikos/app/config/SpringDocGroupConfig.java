@@ -117,6 +117,19 @@ public class SpringDocGroupConfig {
     }
 
     /**
+     * 我的订单（My Orders）：跨 Booking / Commerce 两个限界上下文的查询层聚合接口，
+     * 严格来说不属于任何一个单独的限界上下文，单独拆一个分组，见 mystikos-app 的
+     * {@code com.mystikos.app.orders} 包。
+     */
+    @Bean
+    public GroupedOpenApi myOrdersApi() {
+        return GroupedOpenApi.builder()
+                .group("我的订单 · My Orders")
+                .pathsToMatch("/api/v1/my-orders/**")
+                .build();
+    }
+
+    /**
      * 文件/对象存储、行政区划参考数据都不是业务限界上下文，是被各业务上下文按需调用的
      * 通用技术能力（分别来自 mystikos-common-storage、mystikos-common-region），
      * 单独归一组，不挂在任何业务上下文名下。

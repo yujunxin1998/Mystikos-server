@@ -1,14 +1,19 @@
 package com.mystikos.commerce.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import com.mystikos.commerce.domain.model.MerchandiseOrder;
 import com.mystikos.commerce.domain.model.OrderLineItem;
 import com.mystikos.commerce.domain.model.OrderStatus;
 import com.mystikos.commerce.domain.repository.MerchandiseOrderRepository;
+import com.mystikos.common.result.PageResult;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /** 订单聚合横跨 commerce_order + commerce_order_item 两张表，仓储实现里一起维护。 */
 @Repository
@@ -52,6 +57,28 @@ public class MerchandiseOrderRepositoryImpl implements MerchandiseOrderRepositor
             orderMapper.updateById(orderPO);
         }
         return order;
+    }
+
+    @Override
+    public PageResult<MerchandiseOrder> findByPatronId(Long patronId, int pageNum, int pageSize) {
+        PageHelper.startPage(pageNum, pageSize);
+        List<MerchandiseOrderPO> orderPOs = orderMapper.selectList(Wrappers.<MerchandiseOrderPO>lambdaQuery()
+                .eq(MerchandiseOrderPO::getPatronId, patronId)
+                .orderByDesc(MerchandiseOrderPO::getCreatedAt));
+        PageInfo<MerchandiseOrderPO> pageInfo = new PageInfo<>(orderPOs);
+        if (orderPOs.isEmpty()) {
+            return PageResult.of(List.of(), pageInfo.getTotal(), pageNum, pageSize);
+        }
+
+        List<Long> orderIds = orderPOs.stream().map(MerchandiseOrderPO::getId).toList();
+        Map<Long, List<OrderItemPO>> itemsByOrderId = orderItemMapper.selectList(
+                        Wrappers.<OrderItemPO>lambdaQuery().in(OrderItemPO::getOrderId, orderIds))
+                .stream().collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+
+        List<MerchandiseOrder> orders = orderPOs.stream()
+                .map(po -> toDomain(po, itemsByOrderId.getOrDefault(po.getId(), List.of())))
+                .toList();
+        return PageResult.of(orders, pageInfo.getTotal(), pageNum, pageSize);
     }
 
     private MerchandiseOrderPO toPO(MerchandiseOrder order) {

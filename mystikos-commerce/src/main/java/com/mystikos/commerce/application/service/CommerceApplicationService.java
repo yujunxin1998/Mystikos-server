@@ -20,6 +20,7 @@ import com.mystikos.commerce.domain.repository.MerchandiseOrderRepository;
 import com.mystikos.commerce.domain.repository.ProductRepository;
 import com.mystikos.commerce.domain.repository.WishlistItemRepository;
 import com.mystikos.common.event.DomainEventPublisher;
+import com.mystikos.common.result.PageResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -208,6 +209,16 @@ public class CommerceApplicationService {
                 .orElseThrow(() -> CommerceException.orderNotFound(orderId));
         return new OrderView(order.getId(), order.getPatronId(), order.getItems(), order.getTotalAmount(),
                 order.getShippingAddress(), order.getStatus(), order.getCreatedAt());
+    }
+
+    /** 我的商品订单列表，按下单时间倒序分页。 */
+    public PageResult<OrderView> listMyOrders(Long patronId, int pageNum, int pageSize) {
+        PageResult<MerchandiseOrder> page = merchandiseOrderRepository.findByPatronId(patronId, pageNum, pageSize);
+        List<OrderView> views = page.records().stream()
+                .map(order -> new OrderView(order.getId(), order.getPatronId(), order.getItems(),
+                        order.getTotalAmount(), order.getShippingAddress(), order.getStatus(), order.getCreatedAt()))
+                .toList();
+        return PageResult.of(views, page.total(), page.pageNum(), page.pageSize());
     }
 
     private Product requireOnShelf(Long productId) {

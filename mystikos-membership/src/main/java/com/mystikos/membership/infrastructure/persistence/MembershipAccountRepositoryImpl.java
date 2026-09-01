@@ -1,7 +1,6 @@
 package com.mystikos.membership.infrastructure.persistence;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.mystikos.membership.domain.model.DefaultMembershipTier;
 import com.mystikos.membership.domain.model.MembershipAccount;
 import com.mystikos.membership.domain.repository.MembershipAccountRepository;
 import org.springframework.stereotype.Repository;
@@ -40,15 +39,14 @@ public class MembershipAccountRepositoryImpl implements MembershipAccountReposit
         MembershipAccountPO po = new MembershipAccountPO();
         po.setId(account.getId());
         po.setPatronId(account.getPatronId());
-        po.setCurrentTierCode(account.getCurrentTier().getCode());
+        po.setCurrentTierCode(account.getCurrentTierCode());
         po.setCumulativeSpend(account.getCumulativeSpend());
         po.setTierUpgradedAt(account.getTierUpgradedAt());
         return po;
     }
 
     private MembershipAccount toDomain(MembershipAccountPO po) {
-        return MembershipAccount.restore(po.getId(), po.getPatronId(),
-                DefaultMembershipTier.valueOf(po.getCurrentTierCode()),
+        return MembershipAccount.restore(po.getId(), po.getPatronId(), po.getCurrentTierCode(),
                 po.getCumulativeSpend(), po.getTierUpgradedAt());
     }
 }

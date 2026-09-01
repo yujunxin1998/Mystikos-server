@@ -1,15 +1,14 @@
 package com.mystikos.common.membership;
 
 /**
- * 会员等级契约。具体的等级梯度（有几级、每级叫什么、门槛是多少）业务尚未定义，
- * 这里故意不提供任何实现——不要在框架里编造业务规则。
+ * 会员等级契约。{@code User.updateMembershipTier(MembershipTier)} 只依赖这个接口，
+ * 不关心梯度具体怎么实现。
  *
- * 业务定好梯度后，实现一个枚举（如 {@code DefaultMembershipTier implements MembershipTier}）
- * 或者用配置表 + 数据库驱动的实现都可以，{@code User.updateMembershipTier(MembershipTier)}
- * 只依赖这个接口，不需要跟着改。
- *
- * 未来 mystikos-membership 上下文落地后（累计消费驱动的升级事件），
- * 应该是这个接口权威实现的归属地；见 docs/architecture/domain-model.md 的 Membership 设计。
+ * <p>权威实现是 {@code mystikos-membership} 的 {@code MembershipTierDefinition}——
+ * 一张运营可直接增删改的配置表（VIP0-VIP7 见秘典 v1.0），不是枚举；新增/调整等级
+ * 门槛或权益文案不需要发版。{@code mystikos-identity} 的
+ * {@code MembershipTierUpgradedEventListener}/{@code MembershipTierDowngradedEventListener}
+ * 只用事件自带的 code/level 字段构造这个接口的匿名实现，不反查 Membership 内部类型。
  */
 public interface MembershipTier {
 

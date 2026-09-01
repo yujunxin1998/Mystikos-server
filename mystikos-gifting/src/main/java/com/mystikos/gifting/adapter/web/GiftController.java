@@ -3,9 +3,11 @@ package com.mystikos.gifting.adapter.web;
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.common.security.CurrentUserContext;
 import com.mystikos.gifting.adapter.web.dto.GiftCatalogItemView;
+import com.mystikos.gifting.adapter.web.dto.GiftTierView;
 import com.mystikos.gifting.adapter.web.dto.SendGiftRequest;
 import com.mystikos.gifting.application.command.SendGiftCommand;
 import com.mystikos.gifting.application.service.GiftApplicationService;
+import com.mystikos.gifting.domain.model.GiftTier;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,10 +19,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/gifts")
-@Tag(name = "礼物打赏", description = "礼物目录、赠礼")
+@Tag(name = "礼物打赏", description = "礼物目录、档位、赠礼")
 public class GiftController {
 
     private final GiftApplicationService giftApplicationService;
@@ -30,10 +35,20 @@ public class GiftController {
     }
 
     @GetMapping("/catalog")
-    @Operation(summary = "查询礼物目录", description = "只返回上架中的礼物")
+    @Operation(summary = "查询礼物目录", description = "只返回上架中的礼物，附带所属档位信息与预计亲密度")
     public APIResponse<List<GiftCatalogItemView>> catalog() {
+        Map<Long, GiftTier> tiersById = giftApplicationService.listTiers().stream()
+                .collect(Collectors.toMap(GiftTier::getId, Function.identity()));
         return APIResponse.ok(giftApplicationService.listCatalog().stream()
-                .map(GiftCatalogItemView::from)
+                .map(item -> GiftCatalogItemView.from(item, tiersById.get(item.getTierId())))
+                .toList());
+    }
+
+    @GetMapping("/tiers")
+    @Operation(summary = "查询礼物档位", description = "只返回启用中的档位，按 sortOrder 升序")
+    public APIResponse<List<GiftTierView>> tiers() {
+        return APIResponse.ok(giftApplicationService.listTiers().stream()
+                .map(GiftTierView::from)
                 .toList());
     }
 

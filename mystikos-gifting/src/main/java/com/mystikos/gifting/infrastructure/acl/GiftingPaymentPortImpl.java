@@ -37,4 +37,16 @@ public class GiftingPaymentPortImpl implements PaymentPort {
             throw e;
         }
     }
+
+    @Override
+    public void refundWallet(Long patronId, Long companionId, Long giftTransactionId, BigDecimal amount, String currency) {
+        try {
+            walletApplicationService.refundForGift(patronId, companionId, giftTransactionId, amount, currency);
+        } catch (PaymentException e) {
+            if (e.getResultCode() == PaymentResponseCode.INSUFFICIENT_BALANCE) {
+                throw GiftingException.insufficientBalance();
+            }
+            throw e;
+        }
+    }
 }

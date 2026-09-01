@@ -2,6 +2,7 @@ package com.mystikos.membership.adapter.web;
 
 import com.mystikos.common.result.APIResponse;
 import com.mystikos.membership.adapter.web.dto.MembershipResponse;
+import com.mystikos.membership.adapter.web.dto.MembershipTierView;
 import com.mystikos.membership.application.service.MembershipApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -11,9 +12,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
- * 只读查询——等级推进由事件驱动（见 infrastructure/acl/GiftSentEventListener，
- * 临时顶替方案，Payment 落地后要换），不提供直接写接口。
+ * 只读查询——等级推进由事件驱动（订阅 Payment 的 PaymentCapturedEvent/PaymentRefundedEvent，
+ * 见 infrastructure/acl 下的监听器），不提供直接写接口。
  */
 @RestController
 @RequestMapping("/api/v1/memberships")
@@ -27,8 +30,16 @@ public class MembershipController {
     }
 
     @GetMapping("/{patronId}")
-    @Operation(summary = "查询会员等级", description = "尚无消费记录时返回 LV1、累计消费 0，不报 404")
+    @Operation(summary = "查询会员等级", description = "尚无消费记录时返回最低档、累计消费 0，不报 404")
     public APIResponse<MembershipResponse> get(@Parameter(description = "老板用户ID") @PathVariable Long patronId) {
         return APIResponse.ok(MembershipResponse.from(membershipApplicationService.getMembership(patronId)));
+    }
+
+    @GetMapping("/tiers")
+    @Operation(summary = "查询 VIP 等级梯度", description = "公开的八级阶梯目录，按 sortOrder 升序")
+    public APIResponse<List<MembershipTierView>> tiers() {
+        return APIResponse.ok(membershipApplicationService.listTiers().stream()
+                .map(MembershipTierView::from)
+                .toList());
     }
 }

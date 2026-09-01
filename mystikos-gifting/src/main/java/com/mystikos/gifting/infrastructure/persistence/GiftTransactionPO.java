@@ -40,11 +40,23 @@ public class GiftTransactionPO implements Serializable {
     @TableField("quantity")
     private Integer quantity;
 
-    @Schema(description = "本次交易总金额")
+    @Schema(description = "本次交易总金额（原价，不含档位倍率）")
     @TableField("amount")
     private BigDecimal amount;
+
+    @Schema(description = "档位倍率快照")
+    @TableField("tier_multiplier_snapshot")
+    private BigDecimal tierMultiplierSnapshot;
+
+    @Schema(description = "本次获得的亲密度值（= amount x 倍率）")
+    @TableField("intimacy_value")
+    private BigDecimal intimacyValue;
 
     @Schema(description = "赠送时间")
     @TableField("sent_at")
     private OffsetDateTime sentAt;
+
+    @Schema(description = "状态：COMPLETED/REFUNDED")
+    @TableField("status")
+    private String status;
 }

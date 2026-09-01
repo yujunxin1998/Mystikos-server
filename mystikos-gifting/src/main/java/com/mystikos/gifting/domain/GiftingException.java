@@ -27,4 +27,16 @@ public class GiftingException extends BusinessException {
     public static GiftingException insufficientBalance() {
         return new GiftingException(GiftingResponseCode.INSUFFICIENT_BALANCE);
     }
+
+    public static GiftingException tierNotFound(Long tierId) {
+        return new GiftingException(GiftingResponseCode.GIFT_TIER_NOT_FOUND, "礼物档位不存在：" + tierId);
+    }
+
+    public static GiftingException transactionNotFound(Long transactionId) {
+        return new GiftingException(GiftingResponseCode.GIFT_TRANSACTION_NOT_FOUND, "赠礼流水不存在：" + transactionId);
+    }
+
+    public static GiftingException alreadyRefunded(Long transactionId) {
+        return new GiftingException(GiftingResponseCode.GIFT_TRANSACTION_ALREADY_REFUNDED, "赠礼流水已退款：" + transactionId);
+    }
 }

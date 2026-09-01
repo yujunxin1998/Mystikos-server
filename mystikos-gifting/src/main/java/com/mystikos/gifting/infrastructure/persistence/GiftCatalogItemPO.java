@@ -39,6 +39,10 @@ public class GiftCatalogItemPO implements Serializable {
     @TableField("price")
     private BigDecimal price;
 
+    @Schema(description = "所属档位ID")
+    @TableField("tier_id")
+    private Long tierId;
+
     @Schema(description = "解锁规则类型")
     @TableField("unlock_rule_type")
     private String unlockRuleType;

@@ -10,14 +10,16 @@ public class PaymentRefundedEvent extends DomainEvent {
     private final Long intentId;
     private final SourceType sourceType;
     private final Long sourceId;
+    private final Long patronId;
     private final BigDecimal amount;
     private final String currency;
 
-    public PaymentRefundedEvent(Long intentId, SourceType sourceType, Long sourceId,
+    public PaymentRefundedEvent(Long intentId, SourceType sourceType, Long sourceId, Long patronId,
                                  BigDecimal amount, String currency) {
         this.intentId = intentId;
         this.sourceType = sourceType;
         this.sourceId = sourceId;
+        this.patronId = patronId;
         this.amount = amount;
         this.currency = currency;
     }
@@ -32,6 +34,10 @@ public class PaymentRefundedEvent extends DomainEvent {
 
     public Long getSourceId() {
         return sourceId;
+    }
+
+    public Long getPatronId() {
+        return patronId;
     }
 
     public BigDecimal getAmount() {

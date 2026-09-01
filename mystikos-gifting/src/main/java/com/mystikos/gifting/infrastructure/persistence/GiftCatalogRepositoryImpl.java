@@ -29,8 +29,38 @@ public class GiftCatalogRepositoryImpl implements GiftCatalogRepository {
     }
 
     @Override
+    public List<GiftCatalogItem> findAll() {
+        return mapper.selectList(null).stream().map(this::toDomain).toList();
+    }
+
+    @Override
     public Optional<GiftCatalogItem> findById(Long id) {
         return Optional.ofNullable(mapper.selectById(id)).map(this::toDomain);
+    }
+
+    @Override
+    public GiftCatalogItem save(GiftCatalogItem item) {
+        GiftCatalogItemPO po = toPO(item);
+        if (po.getId() == null) {
+            mapper.insert(po);
+        } else {
+            mapper.updateById(po);
+        }
+        return toDomain(po);
+    }
+
+    private GiftCatalogItemPO toPO(GiftCatalogItem item) {
+        GiftCatalogItemPO po = new GiftCatalogItemPO();
+        po.setId(item.getId());
+        po.setCode(item.getCode());
+        po.setName(item.getName());
+        po.setIcon(item.getIcon());
+        po.setPrice(item.getPrice());
+        po.setTierId(item.getTierId());
+        po.setUnlockRuleType(item.getUnlockRule().type().name());
+        po.setUnlockRuleThreshold(item.getUnlockRule().threshold());
+        po.setActive(item.isActive());
+        return po;
     }
 
     private GiftCatalogItem toDomain(GiftCatalogItemPO po) {
@@ -39,6 +69,6 @@ public class GiftCatalogRepositoryImpl implements GiftCatalogRepository {
                 ? UnlockRule.none()
                 : new UnlockRule(type, po.getUnlockRuleThreshold());
         return new GiftCatalogItem(po.getId(), po.getCode(), po.getName(), po.getIcon(),
-                po.getPrice(), rule, Boolean.TRUE.equals(po.getActive()));
+                po.getPrice(), po.getTierId(), rule, Boolean.TRUE.equals(po.getActive()));
     }
 }

@@ -14,4 +14,11 @@ public interface PaymentPort {
      * ——前提是这个方法和创建 GiftTransaction 在同一个 @Transactional 边界内。
      */
     void debitWallet(Long patronId, Long companionId, Long giftTransactionId, BigDecimal amount, String currency);
+
+    /**
+     * 退款：反向操作——退老板余额、从陪玩余额扣回。陪玩余额不足（已提现/已花掉）会抛
+     * {@link com.mystikos.gifting.domain.GiftingException}，调用方（GiftApplicationService）
+     * 让整个退款事务回滚，这笔赠礼流水维持 COMPLETED，不会出现"退了钱但流水状态没变"。
+     */
+    void refundWallet(Long patronId, Long companionId, Long giftTransactionId, BigDecimal amount, String currency);
 }

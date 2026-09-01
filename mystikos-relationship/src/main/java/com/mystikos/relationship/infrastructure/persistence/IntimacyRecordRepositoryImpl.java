@@ -41,7 +41,7 @@ public class IntimacyRecordRepositoryImpl implements IntimacyRecordRepository {
         po.setId(record.getId());
         po.setPatronId(record.getPatronId());
         po.setCompanionId(record.getCompanionId());
-        po.setStage(record.getStage());
+        po.setLevelCode(record.getLevelCode());
         po.setProgressValue(record.getProgressValue());
         po.setLastInteractionAt(record.getLastInteractionAt());
         return po;
@@ -49,6 +49,6 @@ public class IntimacyRecordRepositoryImpl implements IntimacyRecordRepository {
 
     private IntimacyRecord toDomain(IntimacyRecordPO po) {
         return IntimacyRecord.restore(po.getId(), po.getPatronId(), po.getCompanionId(),
-                po.getStage(), po.getProgressValue(), po.getLastInteractionAt());
+                po.getLevelCode(), po.getProgressValue(), po.getLastInteractionAt());
     }
 }

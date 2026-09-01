@@ -36,9 +36,9 @@ public class IntimacyRecordPO implements Serializable {
     @TableField("companion_id")
     private Long companionId;
 
-    @Schema(description = "亲密度阶段：0-4")
-    @TableField("stage")
-    private Integer stage;
+    @Schema(description = "亲密度等级编码")
+    @TableField("level_code")
+    private String levelCode;
 
     @Schema(description = "累计互动进度值")
     @TableField("progress_value")

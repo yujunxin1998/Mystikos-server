@@ -5,6 +5,8 @@ import com.mystikos.payment.application.command.CreatePaymentIntentCommand;
 import com.mystikos.payment.application.port.PayoutGatewayClient;
 import com.mystikos.payment.domain.PaymentException;
 import com.mystikos.payment.domain.event.PaymentCapturedEvent;
+import com.mystikos.payment.domain.event.PaymentRefundedEvent;
+import com.mystikos.payment.domain.model.PaymentIntent;
 import com.mystikos.payment.domain.model.CompanionPayoutAccount;
 import com.mystikos.payment.domain.model.LedgerDirection;
 import com.mystikos.payment.domain.model.LedgerEntry;
@@ -108,6 +110,36 @@ public class WalletApplicationService {
         ledgerEntryRepository.save(LedgerEntry.record(saved.getId(), companionWallet.getId(),
                 LedgerDirection.CREDIT, amount, currency));
         eventPublisher.publish(new PaymentCapturedEvent(saved.getId(), SourceType.GIFT, giftTransactionId,
+                patronId, amount, currency));
+    }
+
+    /**
+     * 赠礼退款：反向操作——从陪玩余额扣回，退回老板余额，把原来 CAPTURED 的内部 PaymentIntent
+     * 转成 REFUNDED。陪玩余额不足（已提现/已花掉本轮不做部分退款处理，直接拒绝整笔退款）时
+     * 抛异常，调用方（Gifting）让整个退款事务回滚，赠礼流水维持 COMPLETED。
+     */
+    @Transactional
+    public void refundForGift(Long patronId, Long companionId, Long giftTransactionId, BigDecimal amount, String currency) {
+        PaymentIntent intent = paymentIntentRepository.findLatestBySource(SourceType.GIFT, giftTransactionId)
+                .orElseThrow(() -> PaymentException.notFound(giftTransactionId));
+
+        Wallet companionWallet = walletRepository.findOrCreate(companionId, currency);
+        requireSameCurrency(companionWallet, currency);
+        boolean debited = walletRepository.debit(companionWallet.getId(), amount);
+        if (!debited) {
+            throw PaymentException.insufficientBalance();
+        }
+        Wallet patronWallet = walletRepository.findOrCreate(patronId, currency);
+        requireSameCurrency(patronWallet, currency);
+        walletRepository.credit(patronWallet.getId(), amount);
+
+        intent.markRefunded();
+        PaymentIntent saved = paymentIntentRepository.save(intent);
+        ledgerEntryRepository.save(LedgerEntry.record(saved.getId(), companionWallet.getId(),
+                LedgerDirection.DEBIT, amount, currency));
+        ledgerEntryRepository.save(LedgerEntry.record(saved.getId(), patronWallet.getId(),
+                LedgerDirection.CREDIT, amount, currency));
+        eventPublisher.publish(new PaymentRefundedEvent(saved.getId(), SourceType.GIFT, giftTransactionId,
                 patronId, amount, currency));
     }
 

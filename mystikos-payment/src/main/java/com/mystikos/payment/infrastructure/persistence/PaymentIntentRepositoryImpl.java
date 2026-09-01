@@ -66,6 +66,16 @@ public class PaymentIntentRepositoryImpl implements PaymentIntentRepository {
                 .map(this::toDomain);
     }
 
+    @Override
+    public Optional<PaymentIntent> findLatestBySource(SourceType sourceType, Long sourceId) {
+        return Optional.ofNullable(mapper.selectOne(Wrappers.<PaymentIntentPO>lambdaQuery()
+                        .eq(PaymentIntentPO::getSourceType, sourceType.name())
+                        .eq(PaymentIntentPO::getSourceId, sourceId)
+                        .orderByDesc(PaymentIntentPO::getId)
+                        .last("LIMIT 1")))
+                .map(this::toDomain);
+    }
+
     private PaymentIntentPO toPO(PaymentIntent intent) {
         PaymentIntentPO po = new PaymentIntentPO();
         po.setId(intent.getId());

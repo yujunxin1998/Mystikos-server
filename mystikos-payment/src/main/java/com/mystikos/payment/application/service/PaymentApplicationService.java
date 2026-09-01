@@ -111,7 +111,7 @@ public class PaymentApplicationService {
                 ledgerEntryRepository.save(LedgerEntry.record(intent.getId(), null,
                         LedgerDirection.DEBIT, intent.getAmount(), intent.getCurrency()));
                 eventPublisher.publish(new PaymentRefundedEvent(intent.getId(), intent.getSourceType(),
-                        intent.getSourceId(), intent.getAmount(), intent.getCurrency()));
+                        intent.getSourceId(), intent.getPatronId(), intent.getAmount(), intent.getCurrency()));
             }
             default -> { /* IGNORED 已经在上面短路 */ }
         }
@@ -128,7 +128,7 @@ public class PaymentApplicationService {
         ledgerEntryRepository.save(LedgerEntry.record(intent.getId(), null,
                 LedgerDirection.DEBIT, intent.getAmount(), intent.getCurrency()));
         eventPublisher.publish(new PaymentRefundedEvent(intent.getId(), intent.getSourceType(),
-                intent.getSourceId(), intent.getAmount(), intent.getCurrency()));
+                intent.getSourceId(), intent.getPatronId(), intent.getAmount(), intent.getCurrency()));
     }
 
     /**

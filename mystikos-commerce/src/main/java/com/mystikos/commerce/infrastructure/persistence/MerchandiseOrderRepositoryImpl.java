@@ -10,14 +10,20 @@ import com.mystikos.commerce.domain.repository.MerchandiseOrderRepository;
 import com.mystikos.common.result.PageResult;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /** 订单聚合横跨 commerce_order + commerce_order_item 两张表，仓储实现里一起维护。 */
 @Repository
 public class MerchandiseOrderRepositoryImpl implements MerchandiseOrderRepository {
+
+    private static final Set<OrderStatus> EXPIRABLE_STATUSES =
+            EnumSet.of(OrderStatus.DRAFT, OrderStatus.PENDING_PAYMENT);
 
     private final MerchandiseOrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
@@ -87,12 +93,30 @@ public class MerchandiseOrderRepositoryImpl implements MerchandiseOrderRepositor
         return PageResult.of(orders, pageInfo.getTotal(), pageNum, pageSize);
     }
 
+    @Override
+    public List<MerchandiseOrder> findExpirable(OffsetDateTime cutoff) {
+        List<MerchandiseOrderPO> orderPOs = orderMapper.selectList(Wrappers.<MerchandiseOrderPO>lambdaQuery()
+                .in(MerchandiseOrderPO::getStatus, EXPIRABLE_STATUSES.stream().map(Enum::name).toList())
+                .lt(MerchandiseOrderPO::getCreatedAt, cutoff));
+        if (orderPOs.isEmpty()) {
+            return List.of();
+        }
+        List<Long> orderIds = orderPOs.stream().map(MerchandiseOrderPO::getId).toList();
+        Map<Long, List<OrderItemPO>> itemsByOrderId = orderItemMapper.selectList(
+                        Wrappers.<OrderItemPO>lambdaQuery().in(OrderItemPO::getOrderId, orderIds))
+                .stream().collect(Collectors.groupingBy(OrderItemPO::getOrderId));
+        return orderPOs.stream()
+                .map(po -> toDomain(po, itemsByOrderId.getOrDefault(po.getId(), List.of())))
+                .toList();
+    }
+
     private MerchandiseOrderPO toPO(MerchandiseOrder order) {
         MerchandiseOrderPO po = new MerchandiseOrderPO();
         po.setId(order.getId());
         po.setPatronId(order.getPatronId());
         po.setTotalAmount(order.getTotalAmount());
         po.setShippingAddress(order.getShippingAddress());
+        po.setShippingAddressId(order.getShippingAddressId());
         po.setStatus(order.getStatus().name());
         po.setCreatedAt(order.getCreatedAt());
         return po;
@@ -104,6 +128,7 @@ public class MerchandiseOrderRepositoryImpl implements MerchandiseOrderRepositor
                         po.getUnitPriceSnapshot(), po.getQuantity()))
                 .toList();
         return MerchandiseOrder.restore(orderPO.getId(), orderPO.getPatronId(), items, orderPO.getTotalAmount(),
-                orderPO.getShippingAddress(), OrderStatus.valueOf(orderPO.getStatus()), orderPO.getCreatedAt());
+                orderPO.getShippingAddress(), orderPO.getShippingAddressId(), OrderStatus.valueOf(orderPO.getStatus()),
+                orderPO.getCreatedAt());
     }
 }

@@ -25,9 +25,10 @@ public class BookingPaymentCapturedEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void on(PaymentCapturedEvent event) {
-        if (event.getSourceType() != SourceType.BOOKING) {
-            return;
+        if (event.getSourceType() == SourceType.BOOKING) {
+            bookingApplicationService.markPaid(event.getSourceId());
+        } else if (event.getSourceType() == SourceType.BOOKING_GROUP) {
+            bookingApplicationService.markGroupPaid(event.getSourceId());
         }
-        bookingApplicationService.markPaid(event.getSourceId());
     }
 }

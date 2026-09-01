@@ -41,6 +41,12 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <!-- 地址簿国内省份选择/校验，见 AddressApplicationService -->
+            <groupId>com.mystikos</groupId>
+            <artifactId>mystikos-common-region</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
         </dependency>
@@ -58,6 +64,12 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <!-- 只用到独立 JUnit5 + Mockito + MockMvc standalone setup，不起 Spring 容器，不需要 DB/Redis。 -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

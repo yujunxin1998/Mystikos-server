@@ -56,9 +56,20 @@ public class BookingRepositoryImpl implements BookingRepository {
 
     @Override
     public List<BookingOrder> findExpirable(OffsetDateTime cutoff) {
+        // group_id IS NULL：归属预约组的子预约不能被这个普通扫描单独判过期，
+        // 否则组本身的状态会永远停在 PENDING_PAYMENT——组内子预约的过期只能从
+        // BookingOrderGroup 发起并级联，见 BookingApplicationService#expireOverdueGroups。
         List<BookingOrderPO> rows = mapper.selectList(new LambdaQueryWrapper<BookingOrderPO>()
                 .in(BookingOrderPO::getStatus, EXPIRABLE_STATUSES)
-                .lt(BookingOrderPO::getCreatedAt, cutoff));
+                .lt(BookingOrderPO::getCreatedAt, cutoff)
+                .isNull(BookingOrderPO::getGroupId));
+        return rows.stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    public List<BookingOrder> findByGroupId(Long groupId) {
+        List<BookingOrderPO> rows = mapper.selectList(new LambdaQueryWrapper<BookingOrderPO>()
+                .eq(BookingOrderPO::getGroupId, groupId));
         return rows.stream().map(this::toDomain).toList();
     }
 
@@ -74,6 +85,7 @@ public class BookingRepositoryImpl implements BookingRepository {
         po.setStatus(order.getStatus().name());
         po.setCreatedAt(order.getCreatedAt());
         po.setVersion(order.getVersion());
+        po.setGroupId(order.getGroupId());
         return po;
     }
 
@@ -87,6 +99,7 @@ public class BookingRepositoryImpl implements BookingRepository {
                 po.getPriceSnapshot(),
                 BookingStatus.valueOf(po.getStatus()),
                 po.getCreatedAt(),
-                po.getVersion());
+                po.getVersion(),
+                po.getGroupId());
     }
 }

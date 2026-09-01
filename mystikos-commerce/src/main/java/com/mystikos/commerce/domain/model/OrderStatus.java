@@ -14,5 +14,6 @@ public enum OrderStatus {
     SHIPPED,
     COMPLETED,
     CANCELLED,
-    REFUNDED
+    REFUNDED,
+    EXPIRED
 }

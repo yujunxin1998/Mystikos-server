@@ -1,6 +1,7 @@
 package com.mystikos.commerce.application.service;
 
 import com.mystikos.commerce.application.command.AddToCartCommand;
+import com.mystikos.commerce.application.command.CreateDirectOrderCommand;
 import com.mystikos.commerce.application.command.CreateOrderCommand;
 import com.mystikos.commerce.application.command.CreateProductCommand;
 import com.mystikos.commerce.application.command.UpdateProductCommand;
@@ -13,12 +14,14 @@ import com.mystikos.commerce.domain.model.InventoryStock;
 import com.mystikos.commerce.domain.model.MerchandiseOrder;
 import com.mystikos.commerce.domain.model.OrderLineItem;
 import com.mystikos.commerce.domain.model.OrderStatus;
+import com.mystikos.commerce.domain.model.PatronAddress;
 import com.mystikos.commerce.domain.model.Product;
 import com.mystikos.commerce.domain.model.ProductStatus;
 import com.mystikos.commerce.domain.model.WishlistItem;
 import com.mystikos.commerce.domain.repository.CartItemRepository;
 import com.mystikos.commerce.domain.repository.InventoryStockRepository;
 import com.mystikos.commerce.domain.repository.MerchandiseOrderRepository;
+import com.mystikos.commerce.domain.repository.PatronAddressRepository;
 import com.mystikos.commerce.domain.repository.ProductRepository;
 import com.mystikos.commerce.domain.repository.WishlistItemRepository;
 import com.mystikos.common.event.DomainEventPublisher;
@@ -28,7 +31,10 @@ import com.mystikos.payment.domain.model.PaymentProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class CommerceApplicationService {
@@ -44,6 +50,7 @@ public class CommerceApplicationService {
     private final WishlistItemRepository wishlistItemRepository;
     private final InventoryStockRepository inventoryStockRepository;
     private final MerchandiseOrderRepository merchandiseOrderRepository;
+    private final PatronAddressRepository patronAddressRepository;
     private final DomainEventPublisher eventPublisher;
     private final PaymentPort paymentPort;
 
@@ -52,6 +59,7 @@ public class CommerceApplicationService {
                                        WishlistItemRepository wishlistItemRepository,
                                        InventoryStockRepository inventoryStockRepository,
                                        MerchandiseOrderRepository merchandiseOrderRepository,
+                                       PatronAddressRepository patronAddressRepository,
                                        DomainEventPublisher eventPublisher,
                                        PaymentPort paymentPort) {
         this.productRepository = productRepository;
@@ -59,6 +67,7 @@ public class CommerceApplicationService {
         this.wishlistItemRepository = wishlistItemRepository;
         this.inventoryStockRepository = inventoryStockRepository;
         this.merchandiseOrderRepository = merchandiseOrderRepository;
+        this.patronAddressRepository = patronAddressRepository;
         this.eventPublisher = eventPublisher;
         this.paymentPort = paymentPort;
     }
@@ -150,15 +159,49 @@ public class CommerceApplicationService {
                 .toList();
     }
 
-    /** 用当前购物车内容下单：逐行校验商品在架、预占库存，成功后清空购物车。任何一行库存不足就整单失败。 */
+    /**
+     * 用购物车里选中的部分/全部行下单：逐行校验商品在架、预占库存，成功后只清掉选中的行，
+     * 其余行留在购物车。任何一行库存不足或不在购物车中就整单失败。
+     */
     @Transactional
     public Long createOrder(CreateOrderCommand command) {
-        List<CartItem> cartItems = cartItemRepository.findAllByPatron(command.patronId());
-        if (cartItems.isEmpty()) {
+        if (command.productIds() == null || command.productIds().isEmpty()) {
             throw CommerceException.orderEmpty();
         }
+        List<CartItem> cartItems = cartItemRepository.findAllByPatron(command.patronId());
+        Map<Long, CartItem> cartItemsByProduct = cartItems.stream()
+                .collect(Collectors.toMap(CartItem::getProductId, item -> item));
 
-        List<OrderLineItem> lineItems = cartItems.stream()
+        List<CartItem> selected = command.productIds().stream()
+                .map(productId -> {
+                    CartItem cartItem = cartItemsByProduct.get(productId);
+                    if (cartItem == null) {
+                        throw CommerceException.cartLineNotFound(productId);
+                    }
+                    return cartItem;
+                })
+                .toList();
+
+        MerchandiseOrder saved = placeOrder(command.patronId(), selected, command.addressId());
+        cartItemRepository.deleteByPatronAndProducts(command.patronId(), command.productIds());
+
+        eventPublisher.publish(new OrderPlacedEvent(saved.getId(), saved.getPatronId(), saved.getTotalAmount()));
+        return saved.getId();
+    }
+
+    /** 立即购买：跳过购物车，直接用商品+数量下单，不影响购物车里已有的行。 */
+    @Transactional
+    public Long createDirectOrder(CreateDirectOrderCommand command) {
+        CartItem line = CartItem.create(command.patronId(), command.productId(), command.quantity());
+        MerchandiseOrder saved = placeOrder(command.patronId(), List.of(line), command.addressId());
+
+        eventPublisher.publish(new OrderPlacedEvent(saved.getId(), saved.getPatronId(), saved.getTotalAmount()));
+        return saved.getId();
+    }
+
+    private MerchandiseOrder placeOrder(Long patronId, List<CartItem> lines, Long addressId) {
+        PatronAddress address = resolveAddress(addressId, patronId);
+        List<OrderLineItem> lineItems = lines.stream()
                 .map(cartItem -> {
                     Product product = requireOnShelf(cartItem.getProductId());
                     InventoryStock stock = inventoryStockRepository.findByProductId(product.getId())
@@ -169,20 +212,13 @@ public class CommerceApplicationService {
                 })
                 .toList();
 
-        MerchandiseOrder order = MerchandiseOrder.create(command.patronId(), lineItems, command.shippingAddress());
-        MerchandiseOrder saved = merchandiseOrderRepository.save(order);
-        cartItemRepository.deleteAllByPatron(command.patronId());
-
-        eventPublisher.publish(new OrderPlacedEvent(saved.getId(), saved.getPatronId(), saved.getTotalAmount()));
-        return saved.getId();
+        MerchandiseOrder order = MerchandiseOrder.create(patronId, lineItems, address.formatForSnapshot(), address.getId());
+        return merchandiseOrderRepository.save(order);
     }
 
     @Transactional
     public void cancelOrder(Long patronId, Long orderId) {
-        MerchandiseOrder order = requireOrder(orderId);
-        if (!order.getPatronId().equals(patronId)) {
-            throw CommerceException.orderNotFound(orderId);
-        }
+        MerchandiseOrder order = loadOwnedAndSyncExpiry(orderId, patronId);
         order.cancel();
         merchandiseOrderRepository.save(order);
         releaseInventory(order);
@@ -195,9 +231,9 @@ public class CommerceApplicationService {
      */
     @Transactional
     public PaymentCheckoutResult requestPayment(Long orderId, Long patronId, PaymentProvider provider, PaymentScene scene) {
-        MerchandiseOrder order = requireOrder(orderId);
-        if (!order.getPatronId().equals(patronId)) {
-            throw CommerceException.orderNotFound(orderId);
+        MerchandiseOrder order = loadOwnedAndSyncExpiry(orderId, patronId);
+        if (order.getStatus() == OrderStatus.EXPIRED) {
+            throw CommerceException.orderExpired(orderId);
         }
         PaymentCheckoutResult checkout = paymentPort.requestPayment(
                 order.getId(), order.getPatronId(), order.getTotalAmount(), DEFAULT_CURRENCY, provider, scene);
@@ -220,8 +256,33 @@ public class CommerceApplicationService {
         merchandiseOrderRepository.save(order);
     }
 
-    public OrderView getOrder(Long orderId) {
-        return toOrderView(requireOrder(orderId));
+    /** 订单详情（C端）：读取时先懒同步过期状态+校验归属，不用等定时任务下一轮才反映真实状态。 */
+    @Transactional
+    public OrderView getOrder(Long orderId, Long patronId) {
+        return toOrderView(loadOwnedAndSyncExpiry(orderId, patronId));
+    }
+
+    /** 订单详情（后台）：不限买家，同样懒同步过期状态。 */
+    @Transactional
+    public OrderView getOrderForAdmin(Long orderId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        if (order.isOverdue(OffsetDateTime.now())) {
+            order.expire();
+            order = merchandiseOrderRepository.save(order);
+            releaseInventory(order);
+        }
+        return toOrderView(order);
+    }
+
+    /** 定时任务入口：把支付有效期已过的 DRAFT/PENDING_PAYMENT 订单批量置为 EXPIRED，并释放预占库存。 */
+    @Transactional
+    public void expireOverdueOrders() {
+        OffsetDateTime cutoff = OffsetDateTime.now().minus(MerchandiseOrder.PAYMENT_VALIDITY);
+        for (MerchandiseOrder order : merchandiseOrderRepository.findExpirable(cutoff)) {
+            order.expire();
+            MerchandiseOrder saved = merchandiseOrderRepository.save(order);
+            releaseInventory(saved);
+        }
     }
 
     /** 我的商品订单列表，按下单时间倒序分页。 */
@@ -299,9 +360,35 @@ public class CommerceApplicationService {
                 .orElseThrow(() -> CommerceException.orderNotFound(orderId));
     }
 
+    private PatronAddress resolveAddress(Long addressId, Long patronId) {
+        PatronAddress address = patronAddressRepository.findById(addressId)
+                .orElseThrow(() -> CommerceException.addressNotFound(addressId));
+        if (!address.getPatronId().equals(patronId)) {
+            throw CommerceException.addressNotFound(addressId);
+        }
+        return address;
+    }
+
+    /**
+     * 取订单并校验归属；不属于该老板的订单一律当"不存在"处理，不暴露他人订单是否存在。
+     * 顺带把逾期未支付的订单懒失效并落库+释放预占库存，保证任何读到的状态都是最新的。
+     */
+    private MerchandiseOrder loadOwnedAndSyncExpiry(Long orderId, Long patronId) {
+        MerchandiseOrder order = requireOrder(orderId);
+        if (!order.getPatronId().equals(patronId)) {
+            throw CommerceException.orderNotFound(orderId);
+        }
+        if (order.isOverdue(OffsetDateTime.now())) {
+            order.expire();
+            order = merchandiseOrderRepository.save(order);
+            releaseInventory(order);
+        }
+        return order;
+    }
+
     private OrderView toOrderView(MerchandiseOrder order) {
         return new OrderView(order.getId(), order.getPatronId(), order.getItems(), order.getTotalAmount(),
-                order.getShippingAddress(), order.getStatus(), order.getCreatedAt());
+                order.getShippingAddress(), order.getStatus(), order.getCreatedAt(), order.getExpiresAt());
     }
 
     private void releaseInventory(MerchandiseOrder order) {

@@ -70,5 +70,11 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <!-- 只用到独立 JUnit5 + Mockito + MockMvc standalone setup，不起 Spring 容器，不需要 DB/Redis。 -->
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

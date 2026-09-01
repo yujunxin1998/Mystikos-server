@@ -36,6 +36,10 @@ public class MerchandiseOrderPO implements Serializable {
     @TableField("shipping_address")
     private String shippingAddress;
 
+    @Schema(description = "下单时选择的地址ID，仅用于追溯")
+    @TableField("shipping_address_id")
+    private Long shippingAddressId;
+
     @Schema(description = "订单状态")
     @TableField("status")
     private String status;

@@ -62,6 +62,13 @@ public class CartItemRepositoryImpl implements CartItemRepository {
         mapper.delete(Wrappers.<CartItemPO>lambdaQuery().eq(CartItemPO::getPatronId, patronId));
     }
 
+    @Override
+    public void deleteByPatronAndProducts(Long patronId, List<Long> productIds) {
+        mapper.delete(Wrappers.<CartItemPO>lambdaQuery()
+                .eq(CartItemPO::getPatronId, patronId)
+                .in(CartItemPO::getProductId, productIds));
+    }
+
     private CartItem toDomain(CartItemPO po) {
         return CartItem.restore(po.getId(), po.getPatronId(), po.getProductId(), po.getQuantity());
     }

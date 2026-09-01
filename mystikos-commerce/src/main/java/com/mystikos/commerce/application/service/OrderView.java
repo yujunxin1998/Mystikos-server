@@ -8,5 +8,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public record OrderView(Long orderId, Long patronId, List<OrderLineItem> items, BigDecimal totalAmount,
-                         String shippingAddress, OrderStatus status, OffsetDateTime createdAt) {
+                         String shippingAddress, OrderStatus status, OffsetDateTime createdAt,
+                         OffsetDateTime expiresAt) {
 }

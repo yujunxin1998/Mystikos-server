@@ -30,4 +30,21 @@ public class BookingException extends BusinessException {
         return new BookingException(BookingResponseCode.BOOKING_COMPANION_NOT_BOOKABLE,
                 "陪玩不存在或当前不可预约：" + companionId);
     }
+
+    public static BookingException slotConflict(Long companionId) {
+        return new BookingException(BookingResponseCode.SLOT_CONFLICT, "该陪玩在此时段已被预约：" + companionId);
+    }
+
+    /** 批量结算时不逐行区分是哪个陪玩/时段冲突，用这个不带 ID 的版本。 */
+    public static BookingException slotConflict() {
+        return new BookingException(BookingResponseCode.SLOT_CONFLICT);
+    }
+
+    public static BookingException cartLineNotFound(Long lineId) {
+        return new BookingException(BookingResponseCode.BOOKING_NOT_FOUND, "预约购物车中不存在该行：" + lineId);
+    }
+
+    public static BookingException groupNotFound(Long groupId) {
+        return new BookingException(BookingResponseCode.BOOKING_NOT_FOUND, "预约组不存在：" + groupId);
+    }
 }

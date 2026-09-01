@@ -16,4 +16,7 @@ public interface CartItemRepository {
     void deleteByPatronAndProduct(Long patronId, Long productId);
 
     void deleteAllByPatron(Long patronId);
+
+    /** 批量删除选中的行，供"部分选购结算"用——只清结算掉的商品，其余留在购物车。 */
+    void deleteByPatronAndProducts(Long patronId, List<Long> productIds);
 }

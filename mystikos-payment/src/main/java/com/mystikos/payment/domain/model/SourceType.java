@@ -6,6 +6,7 @@ package com.mystikos.payment.domain.model;
  */
 public enum SourceType {
     BOOKING,
+    BOOKING_GROUP,
     MERCHANDISE,
     GIFT,
     WALLET_RECHARGE

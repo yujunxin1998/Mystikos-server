@@ -96,4 +96,11 @@ public class BookingOrderPO implements Serializable {
     @Version
     @TableField("version")
     private Long version;
+
+    /**
+     * 归属的预约组ID；NULL=独立预约（含直接预约买家路径），非空=归属某个组合支付的预约组
+     */
+    @Schema(description = "归属的预约组ID，NULL表示独立预约")
+    @TableField("group_id")
+    private Long groupId;
 }

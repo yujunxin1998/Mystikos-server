@@ -19,6 +19,9 @@ public interface BookingRepository {
 
     PageResult<BookingOrder> findByPatronId(Long patronId, int pageNum, int pageSize);
 
-    /** 支付有效期已过的 DRAFT/PENDING_PAYMENT 订单，供定时任务批量失效。 */
+    /** 支付有效期已过的 DRAFT/PENDING_PAYMENT 独立订单（不含归属预约组的子订单），供定时任务批量失效。 */
     List<BookingOrder> findExpirable(OffsetDateTime cutoff);
+
+    /** 某个预约组下的所有子预约，供组级联操作（请求支付/标记已付/失效/取消）用。 */
+    List<BookingOrder> findByGroupId(Long groupId);
 }

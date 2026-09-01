@@ -17,4 +17,8 @@ public interface PaymentPort {
 
     PaymentCheckoutResult requestPayment(Long bookingId, Long patronId, BigDecimal amount, String currency,
                                           PaymentProvider provider, PaymentScene scene);
+
+    /** 同上，但回指的是一个预约组（多条预约合并支付），而不是单条 BookingOrder。 */
+    PaymentCheckoutResult requestGroupPayment(Long groupId, Long patronId, BigDecimal amount, String currency,
+                                               PaymentProvider provider, PaymentScene scene);
 }

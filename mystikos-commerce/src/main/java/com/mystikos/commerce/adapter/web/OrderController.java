@@ -1,8 +1,10 @@
 package com.mystikos.commerce.adapter.web;
 
+import com.mystikos.commerce.adapter.web.dto.BuyNowOrderRequest;
 import com.mystikos.commerce.adapter.web.dto.CreateOrderRequest;
 import com.mystikos.commerce.adapter.web.dto.OrderResponse;
 import com.mystikos.commerce.adapter.web.dto.PaymentCheckoutResponse;
+import com.mystikos.commerce.application.command.CreateDirectOrderCommand;
 import com.mystikos.commerce.application.command.CreateOrderCommand;
 import com.mystikos.commerce.application.service.CommerceApplicationService;
 import com.mystikos.common.result.APIResponse;
@@ -37,17 +39,25 @@ public class OrderController {
     }
 
     @PostMapping
-    @Operation(summary = "下单", description = "用当前购物车内容下单，成功后清空购物车；任意一行库存不足则整单失败")
+    @Operation(summary = "下单", description = "用购物车中选中的部分/全部行下单，成功后只清掉选中的行；任意一行库存不足则整单失败")
     public APIResponse<Long> create(@Valid @RequestBody CreateOrderRequest request) {
         Long orderId = commerceApplicationService.createOrder(new CreateOrderCommand(
-                currentPatronId(), request.getShippingAddress()));
+                currentPatronId(), request.getProductIds(), request.getAddressId()));
+        return APIResponse.ok(orderId);
+    }
+
+    @PostMapping("/buy-now")
+    @Operation(summary = "立即购买", description = "跳过购物车，直接用商品+数量下单，不影响购物车里已有的行")
+    public APIResponse<Long> buyNow(@Valid @RequestBody BuyNowOrderRequest request) {
+        Long orderId = commerceApplicationService.createDirectOrder(new CreateDirectOrderCommand(
+                currentPatronId(), request.getProductId(), request.getQuantity(), request.getAddressId()));
         return APIResponse.ok(orderId);
     }
 
     @GetMapping("/{orderId}")
     @Operation(summary = "订单详情")
     public APIResponse<OrderResponse> get(@Parameter(description = "订单ID") @PathVariable Long orderId) {
-        return APIResponse.ok(OrderResponse.from(commerceApplicationService.getOrder(orderId)));
+        return APIResponse.ok(OrderResponse.from(commerceApplicationService.getOrder(orderId, currentPatronId())));
     }
 
     @PostMapping("/{orderId}/payment")

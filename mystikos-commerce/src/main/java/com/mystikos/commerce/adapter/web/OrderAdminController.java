@@ -51,7 +51,7 @@ public class OrderAdminController {
     @GetMapping("/{orderId}")
     @Operation(summary = "订单详情（后台）", description = "不限买家")
     public APIResponse<OrderResponse> get(@Parameter(description = "订单ID") @PathVariable Long orderId) {
-        return APIResponse.ok(OrderResponse.from(commerceApplicationService.getOrder(orderId)));
+        return APIResponse.ok(OrderResponse.from(commerceApplicationService.getOrderForAdmin(orderId)));
     }
 
     @PutMapping("/{orderId}/start-fulfilling")

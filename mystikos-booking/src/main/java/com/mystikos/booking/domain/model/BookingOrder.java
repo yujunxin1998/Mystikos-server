@@ -36,10 +36,11 @@ public class BookingOrder {
     private BookingStatus status;
     private final OffsetDateTime createdAt;
     private Long version;
+    private final Long groupId;
 
     private BookingOrder(Long id, Long patronId, Long companionId, TimeRange timeRange,
                           BigDecimal durationHours, BigDecimal priceSnapshot,
-                          BookingStatus status, OffsetDateTime createdAt, Long version) {
+                          BookingStatus status, OffsetDateTime createdAt, Long version, Long groupId) {
         this.id = id;
         this.patronId = patronId;
         this.companionId = companionId;
@@ -49,21 +50,29 @@ public class BookingOrder {
         this.status = status;
         this.createdAt = createdAt;
         this.version = version;
+        this.groupId = groupId;
     }
 
-    /** 创建一笔新预约，初始状态为 DRAFT，下单时刻即开始计算 15 分钟支付有效期。 */
+    /** 创建一笔新预约（不属于任何组，即"立即预约"路径），初始状态为 DRAFT，下单时刻即开始计算 15 分钟支付有效期。 */
     public static BookingOrder create(Long patronId, Long companionId, TimeRange timeRange,
                                        BigDecimal durationHours, BigDecimal priceSnapshot) {
         return new BookingOrder(null, patronId, companionId, timeRange, durationHours, priceSnapshot,
-                BookingStatus.DRAFT, OffsetDateTime.now(), 0L);
+                BookingStatus.DRAFT, OffsetDateTime.now(), 0L, null);
+    }
+
+    /** 创建一笔归属某个预约组的子预约，供 BookingApplicationService#checkoutBookingCart 用。 */
+    public static BookingOrder createGrouped(Long patronId, Long companionId, TimeRange timeRange,
+                                              BigDecimal durationHours, BigDecimal priceSnapshot, Long groupId) {
+        return new BookingOrder(null, patronId, companionId, timeRange, durationHours, priceSnapshot,
+                BookingStatus.DRAFT, OffsetDateTime.now(), 0L, groupId);
     }
 
     /** 从持久化数据重建聚合，仅供仓储实现调用。 */
     public static BookingOrder restore(Long id, Long patronId, Long companionId, TimeRange timeRange,
                                         BigDecimal durationHours, BigDecimal priceSnapshot,
-                                        BookingStatus status, OffsetDateTime createdAt, Long version) {
+                                        BookingStatus status, OffsetDateTime createdAt, Long version, Long groupId) {
         return new BookingOrder(id, patronId, companionId, timeRange, durationHours, priceSnapshot,
-                status, createdAt, version);
+                status, createdAt, version, groupId);
     }
 
     /** 距下单已过 15 分钟且仍处于未支付状态，判定为已失效——由调用方决定是否落库 {@link #expire()}。 */
@@ -162,5 +171,10 @@ public class BookingOrder {
 
     public Long getVersion() {
         return version;
+    }
+
+    /** 归属的预约组 ID；null 表示不属于任何组（独立预约，含"立即预约"路径）。 */
+    public Long getGroupId() {
+        return groupId;
     }
 }

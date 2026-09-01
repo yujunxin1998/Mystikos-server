@@ -37,6 +37,9 @@ public class OrderResponse implements Serializable {
     @Schema(description = "创建时间")
     private OffsetDateTime createdAt;
 
+    @Schema(description = "支付有效期截止时间；DRAFT/PENDING_PAYMENT 状态下过了这个时间会被判定为 EXPIRED")
+    private OffsetDateTime expiresAt;
+
     public static OrderResponse from(OrderView view) {
         OrderResponse dto = new OrderResponse();
         dto.setOrderId(view.orderId());
@@ -46,6 +49,7 @@ public class OrderResponse implements Serializable {
         dto.setShippingAddress(view.shippingAddress());
         dto.setStatus(view.status().name());
         dto.setCreatedAt(view.createdAt());
+        dto.setExpiresAt(view.expiresAt());
         return dto;
     }
 }

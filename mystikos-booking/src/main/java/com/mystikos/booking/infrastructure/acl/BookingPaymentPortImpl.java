@@ -41,4 +41,14 @@ public class BookingPaymentPortImpl implements PaymentPort {
                         provider, scene));
         return new PaymentCheckoutResult(result.intentId(), result.payloadType(), result.payload(), result.status().name());
     }
+
+    @Override
+    public PaymentCheckoutResult requestGroupPayment(Long groupId, Long patronId,
+                                                       BigDecimal amount, String currency,
+                                                       PaymentProvider provider, PaymentScene scene) {
+        PaymentIntentResult result = paymentApplicationService.createIntent(
+                new CreatePaymentIntentCommand(SourceType.BOOKING_GROUP, groupId, patronId, amount, currency,
+                        provider, scene));
+        return new PaymentCheckoutResult(result.intentId(), result.payloadType(), result.payload(), result.status().name());
+    }
 }

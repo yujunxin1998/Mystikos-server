@@ -1,5 +1,6 @@
 package com.mystikos.common.security;
 
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,7 +20,10 @@ public final class CurrentUserContext {
 
     public static CurrentUser get() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
+        // AnonymousAuthenticationToken.isAuthenticated() 恒为 true（principal name 是 "anonymousUser"），
+        // 单看 isAuthenticated() 拦不住匿名请求——permitAll 的路径下没带 token 也会落到这里。
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
             throw new IllegalStateException("当前请求未认证，无法获取当前用户");
         }
         Set<String> roles = authentication.getAuthorities().stream()
